@@ -41,6 +41,11 @@ app.use('/api', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`[strm-backend] Proxy running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`[strm-backend] Proxy running on http://localhost:${PORT}`);
+  });
+}
+
+// Export for Vercel Serverless
+export default app;
