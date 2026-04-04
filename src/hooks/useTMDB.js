@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { mockTrending, resolveImg, getTitle, getYear } from '../data/mockData'
 
-const BASE = 'https://api.themoviedb.org/3'
-const KEY  = import.meta.env.VITE_TMDB_API_KEY
+const BASE = '/api'
 
 /** Normalise a TMDB item so components always get the same shape */
 /** Fisher-Yates Shuffle */
@@ -67,9 +66,15 @@ function normalise(item, forceCategory = null) {
   }
 }
 
+const CURRENT_YEAR = new Date().getFullYear()
+const isReleased = (item) => {
+  const y = parseInt(item.year, 10)
+  return isNaN(y) || y <= CURRENT_YEAR
+}
+
 async function tmdbFetch(path, params = '') {
   const connector = path.includes('?') ? '&' : '?'
-  const res = await fetch(`${BASE}${path}${connector}api_key=${KEY}&language=en-US${params}`)
+  const res = await fetch(`${BASE}${path}${connector}language=en-US${params}`)
   if (!res.ok) throw new Error(`TMDB ${res.status}`)
   return res.json()
 }
@@ -105,7 +110,7 @@ export function useTMDB(auth) {
   }
 
   const fetchMore = async (cat = 'all', countryCode = 'all') => {
-    if (loading || !KEY) return
+    if (loading) return
     
     // Limit to 100 items per category as requested to prevent infinite loading
     const currentCount = itemsMap[cat]?.library?.length || 0
@@ -142,7 +147,9 @@ export function useTMDB(auth) {
           tmdbFetch(tPath, `&sort_by=created_at.desc&page=${nextPage}${authParams}`)
         ])
         
-        results.library = shuffle([...(m.results || []), ...(t.results || [])]).map(i => normalise(i))
+        results.library = shuffle([...(m.results || []), ...(t.results || [])])
+          .map(i => normalise(i))
+          .filter(isReleased)
         
         // Skip discovery parallel fetch
       } else {
@@ -172,15 +179,16 @@ export function useTMDB(auth) {
             tmdbFetch('/trending/all/week', `&page=1`) // Trending is always global for diversity
           ])
 
-          results.library  = shuffle([...(libM.results || []), ...(libT.results || [])]).map(i => normalise(i, force))
-          results.top      = shuffle([...(topM.results || []), ...(topT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
-          results.recent   = shuffle([...(recM.results || []), ...(recT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
-          results.popular  = shuffle([...(popM.results || []), ...(popT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
+          results.library  = shuffle([...(libM.results || []), ...(libT.results || [])]).map(i => normalise(i, force)).filter(isReleased)
+          results.top      = shuffle([...(topM.results || []), ...(topT.results || [])]).map(i => normalise(i, force)).filter(isReleased).slice(0, 10)
+          results.recent   = shuffle([...(recM.results || []), ...(recT.results || [])]).map(i => normalise(i, force)).filter(isReleased).slice(0, 10)
+          results.popular  = shuffle([...(popM.results || []), ...(popT.results || [])]).map(i => normalise(i, force)).filter(isReleased).slice(0, 10)
           
           // Local filter for trending row (ensures relevant content for the tab)
           const targetLangs = cat === 'cdrama' ? ['zh', 'cn'] : [cat === 'kdrama' ? 'ko' : 'ja']
           results.trending = (trendAll.results || [])
             .map(i => normalise(i))
+            .filter(isReleased)
             .filter(i => {
               if (cat === 'all') return true
               if (cat === 'anime') return i.category === 'anime'
@@ -194,7 +202,9 @@ export function useTMDB(auth) {
             tmdbFetch('/discover/movie', `${filters}${baseParams}`),
             tmdbFetch('/discover/tv',    `${filters}${baseParams}`)
           ])
-          results.library = shuffle([...(m.results || []), ...(t.results || [])]).map(i => normalise(i, force))
+          results.library = shuffle([...(m.results || []), ...(t.results || [])])
+            .map(i => normalise(i, force))
+            .filter(isReleased)
         }
       }
 
@@ -225,15 +235,9 @@ export function useTMDB(auth) {
   }
 
   useEffect(() => {
-    if (!KEY) {
-      setItemsMap(prev => ({ 
-        ...prev, 
-        all: { ...initialState, library: shuffle([...mockTrending]).map(i => normalise(i)) }
-      }))
-      setUsingMock(true)
-    } else {
-      fetchMore('all', 'all')
-    }
+    // If backend is down or not proxying properly, it will fall back via Error Boundary or mock implementation
+    // For now, always fetch 'all' on mount since TMDB is completely reliant on proxy
+    fetchMore('all', 'all')
   }, [])
 
   return { itemsMap, pagesMap, loading, error, usingMock, fetchMore, resetCategory }

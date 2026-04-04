@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 
-const BASE = 'https://api.themoviedb.org/3'
-const KEY  = import.meta.env.VITE_TMDB_API_KEY
+const BASE = '/api'
 
 export function useAuth() {
   const [sessionId, setSessionId] = useState(localStorage.getItem('tmdb_session_id'))
@@ -19,8 +18,8 @@ export function useAuth() {
         let currentSession = sessionId
 
         // 1. If returning from TMDB approval, create session
-        if (requestToken && approved === 'true' && KEY) {
-          const res = await fetch(`${BASE}/authentication/session/new?api_key=${KEY}`, {
+        if (requestToken && approved === 'true') {
+          const res = await fetch(`${BASE}/authentication/session/new`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ request_token: requestToken })
@@ -40,8 +39,8 @@ export function useAuth() {
         }
 
         // 2. If we have a session, fetch Account details
-        if (currentSession && KEY && !account) {
-          const accRes = await fetch(`${BASE}/account?api_key=${KEY}&session_id=${currentSession}`)
+        if (currentSession && !account) {
+          const accRes = await fetch(`${BASE}/account?session_id=${currentSession}`)
           if (accRes.ok) {
             const accData = await accRes.json()
             setAccount(accData)
@@ -62,13 +61,9 @@ export function useAuth() {
   }, []) // run once on mount
 
   const login = async () => {
-    if (!KEY) {
-      alert("TMDB API Key missing. Authentication disabled.")
-      return
-    }
     setLoading(true)
     try {
-      const res = await fetch(`${BASE}/authentication/token/new?api_key=${KEY}`)
+      const res = await fetch(`${BASE}/authentication/token/new`)
       const data = await res.json()
       if (data.success) {
         const token = data.request_token

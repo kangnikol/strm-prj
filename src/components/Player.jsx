@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Star, ChevronDown, PlayCircle, Loader2, Heart, Bookmark } from 'lucide-react'
 
 const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
-const BASE = 'https://api.themoviedb.org/3'
-const KEY  = import.meta.env.VITE_TMDB_API_KEY
+const BASE = '/api'
 
 /**
  * Player — Vidking embed with Swiss editorial metadata layout.
@@ -45,14 +44,14 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
 
   // Fetch Account States if Logged In
   useEffect(() => {
-    if (auth?.sessionId && KEY) {
+    if (auth?.sessionId) {
       const type = isTV ? 'tv' : 'movie'
-      fetch(`${BASE}/${type}/${item.id}/account_states?api_key=${KEY}&session_id=${auth.sessionId}`)
+      fetch(`${BASE}/${type}/${item.id}/account_states?session_id=${auth.sessionId}`)
         .then(r => r.json())
         .then(d => setAccountState({ favorite: d.favorite, watchlist: d.watchlist }))
         .catch(console.error)
     }
-  }, [item.id, auth?.sessionId, KEY, isTV])
+  }, [item.id, auth?.sessionId, isTV])
 
   // Toggle Favorite / Watchlist
   const toggleMark = async (type) => {
@@ -65,7 +64,7 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
     const isAdding = !accountState[type]
 
     try {
-      const res = await fetch(`${BASE}/account/${auth.account.id}/${type}?api_key=${KEY}&session_id=${auth.sessionId}`, {
+      const res = await fetch(`${BASE}/account/${auth.account.id}/${type}?session_id=${auth.sessionId}`, {
         method: 'POST',
         headers: { 'accept': 'application/json', 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -87,8 +86,8 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
 
   // Fetch Seasons
   useEffect(() => {
-    if (isTV && KEY) {
-      fetch(`${BASE}/tv/${item.id}?api_key=${KEY}&language=en-US`)
+    if (isTV) {
+      fetch(`${BASE}/tv/${item.id}?language=en-US`)
         .then(res => res.json())
         .then(data => {
           // Default to non-zero seasons (specials are usually season 0)
@@ -102,11 +101,11 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
     }
   }, [item.id, isTV])
 
-  // Fetch Episodes for selected season
+  // Fetch Episodes when an activeSeason is selected
   useEffect(() => {
-    if (isTV && KEY && activeSeason !== null) {
+    if (isTV && activeSeason) {
       setLoadingEpisodes(true)
-      fetch(`${BASE}/tv/${item.id}/season/${activeSeason}?api_key=${KEY}&language=en-US`)
+      fetch(`${BASE}/tv/${item.id}/season/${activeSeason}?language=en-US`)
         .then(res => res.json())
         .then(data => {
           setEpisodes(data.episodes || [])

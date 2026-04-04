@@ -161,8 +161,20 @@ export default function App() {
   const filteredRecent   = currentCategoryData.recent
   const filteredPopular  = currentCategoryData.popular
 
-  const featured = filteredLibrary[0]
-  const gridItems = filteredLibrary.slice(1)
+  const isPersonalLibrary = category === 'favorites' || category === 'watchlist'
+  const showHero = !isPersonalLibrary && filteredLibrary.length > 0
+  
+  const featured = showHero ? filteredLibrary[0] : null
+  const gridItems = showHero ? filteredLibrary.slice(1) : filteredLibrary
+
+  // Pre-calculate grouped sections if we are inside personal lists
+  const groupedPersonalItems = {}
+  if (isPersonalLibrary) {
+    gridItems.forEach(item => {
+      if (!groupedPersonalItems[item.category]) groupedPersonalItems[item.category] = []
+      groupedPersonalItems[item.category].push(item)
+    })
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-ctp-base text-ctp-text">
@@ -206,7 +218,7 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  <Hero featured={featured} onPlay={setActiveItem} t={t} />
+                  {showHero && <Hero featured={featured} onPlay={setActiveItem} t={t} />}
 
                   {/* Marquee specifically for Home/All tab */}
                   {category === 'all' && (
@@ -224,31 +236,58 @@ export default function App() {
                       <SectionRow title={`Popular Picks`} items={filteredPopular} onPlay={setActiveItem} t={t} />
                     </div>
 
-                    {/* Full Library Grid */}
-                    <div>
-                      <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
-                        <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">Full Library</h3>
-                        <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{filteredLibrary.length} {t.titles}</span>
-                      </div>
+                    {/* Main Library Display */}
+                    {!isPersonalLibrary ? (
+                      <div>
+                        <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
+                          <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">Full Library</h3>
+                          <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{filteredLibrary.length} {t.titles}</span>
+                        </div>
 
-                      <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
-                        {gridItems.map((item, i) => {
-                          const isLarge = category === 'all' && i < 2
-                          return (
-                            <div key={`${item.id}-${i}`} className={isLarge ? "col-span-12 lg:col-span-6" : "col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2"}>
-                              <VideoCard item={item} index={i} featured={isLarge} onClick={setActiveItem} t={t} />
-                            </div>
-                          )
-                        })}
+                        <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
+                          {gridItems.map((item, i) => {
+                            const isLarge = category === 'all' && i < 2
+                            return (
+                              <div key={`${item.id}-${i}`} className={isLarge ? "col-span-12 lg:col-span-6" : "col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2"}>
+                                <VideoCard item={item} index={i} featured={isLarge} onClick={setActiveItem} t={t} />
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-16">
+                        {Object.keys(groupedPersonalItems).length === 0 && !loading && (
+                          <div className="flex flex-col items-center justify-center p-12 text-ctp-overlay">
+                            <span className="text-[10px] tracking-widest uppercase font-bold">Looks empty here!</span>
+                          </div>
+                        )}
+                        {Object.entries(groupedPersonalItems).map(([catKey, items]) => (
+                          <div key={catKey}>
+                            <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
+                              <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-text">{t[catKey] || catKey}</h3>
+                              <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{items.length} {t.titles}</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
+                              {items.map((item, i) => (
+                                <div key={`${item.id}-${i}`} className="col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2">
+                                  <VideoCard item={item} index={i} featured={false} onClick={setActiveItem} t={t} />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </section>
 
-                  <InfiniteScroll 
-                    onVisible={() => fetchMore(category, country)} 
-                    loading={loading} 
-                    hasMore={!usingMock && filteredLibrary.length < 100} 
-                  />
+                  {!isPersonalLibrary && (
+                    <InfiniteScroll 
+                      onVisible={() => fetchMore(category, country)} 
+                      loading={loading} 
+                      hasMore={!usingMock && filteredLibrary.length < 100} 
+                    />
+                  )}
                 </>
               )}
             </motion.main>
