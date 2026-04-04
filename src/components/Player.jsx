@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Star, ChevronDown, PlayCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Star, ChevronDown, PlayCircle, Loader2, Heart, Bookmark } from 'lucide-react'
 
 const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
 const BASE = 'https://api.themoviedb.org/3'
@@ -12,8 +12,10 @@ const KEY  = import.meta.env.VITE_TMDB_API_KEY
  * @param {Object}   props.item    - Normalised TMDB item
  * @param {Function} props.onBack  - Back navigation handler
  * @param {Object}   props.t       - Translation dictionary
+ * @param {Object}   props.auth    - Auth state
+ * @param {Function} props.resetCategory - Cache invalidation callback
  */
-export default function Player({ item, onBack, t }) {
+export default function Player({ item, onBack, t, auth, resetCategory }) {
   const isTV  = item.mediaType === 'tv'
 
   // TV Selector State
@@ -23,6 +25,10 @@ export default function Player({ item, onBack, t }) {
   const [activeEpisode, setActiveEpisode] = useState(1)
   const [loadingEpisodes, setLoadingEpisodes] = useState(false)
   const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false)
+  
+  // Auth Account States (Favorite / Watchlist)
+  const [accountState, setAccountState] = useState({ favorite: false, watchlist: false })
+  const [marking, setMarking] = useState(false)
   
   const dropdownRef = useRef(null)
 
@@ -36,6 +42,48 @@ export default function Player({ item, onBack, t }) {
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  // Fetch Account States if Logged In
+  useEffect(() => {
+    if (auth?.sessionId && KEY) {
+      const type = isTV ? 'tv' : 'movie'
+      fetch(`${BASE}/${type}/${item.id}/account_states?api_key=${KEY}&session_id=${auth.sessionId}`)
+        .then(r => r.json())
+        .then(d => setAccountState({ favorite: d.favorite, watchlist: d.watchlist }))
+        .catch(console.error)
+    }
+  }, [item.id, auth?.sessionId, KEY, isTV])
+
+  // Toggle Favorite / Watchlist
+  const toggleMark = async (type) => {
+    if (!auth?.sessionId || !auth?.account?.id) {
+       alert("Please log in to use this feature.")
+       return
+    }
+    setMarking(true)
+    const mediaType = isTV ? 'tv' : 'movie'
+    const isAdding = !accountState[type]
+
+    try {
+      const res = await fetch(`${BASE}/account/${auth.account.id}/${type}?api_key=${KEY}&session_id=${auth.sessionId}`, {
+        method: 'POST',
+        headers: { 'accept': 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify({
+          media_type: mediaType,
+          media_id: item.id,
+          [type]: isAdding
+        })
+      })
+      if (res.ok) {
+        setAccountState(prev => ({ ...prev, [type]: isAdding }))
+        if (resetCategory) resetCategory(type === 'favorite' ? 'favorites' : 'watchlist')
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setMarking(false)
+    }
+  }
 
   // Fetch Seasons
   useEffect(() => {
@@ -102,6 +150,25 @@ export default function Player({ item, onBack, t }) {
         <span className="text-[10px] text-ctp-overlay font-bold uppercase tracking-widest px-2 truncate max-w-xl">
           {item.title} {isTV && `- S${activeSeason} E${activeEpisode}`}
         </span>
+
+        {/* Auth Actions */}
+        <div className="flex-1" />
+        <motion.button 
+          onClick={() => toggleMark('favorite')} 
+          disabled={marking}
+          className={`p-1.5 rounded transition-colors ${accountState.favorite ? 'text-ctp-red' : 'text-ctp-overlay1 hover:text-ctp-text'}`}
+          whileTap={{ scale: 0.9 }}
+        >
+           <Heart size={14} fill={accountState.favorite ? 'currentColor' : 'none'} strokeWidth={2} />
+        </motion.button>
+        <motion.button 
+          onClick={() => toggleMark('watchlist')} 
+          disabled={marking}
+          className={`p-1.5 rounded transition-colors ${accountState.watchlist ? 'text-ctp-accent' : 'text-ctp-overlay1 hover:text-ctp-text'}`}
+          whileTap={{ scale: 0.9 }}
+        >
+           <Bookmark size={14} fill={accountState.watchlist ? 'currentColor' : 'none'} strokeWidth={2} />
+        </motion.button>
       </div>
 
       {/* ── Main Content ─────────────────────────────────────────────── */}

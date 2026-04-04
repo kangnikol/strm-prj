@@ -10,6 +10,7 @@ import Marquee     from './components/Marquee'
 import SectionRow   from './components/SectionRow'
 import InfiniteScroll from './components/InfiniteScroll'
 import { useTMDB } from './hooks/useTMDB'
+import { useAuth } from './hooks/useAuth'
 import { translations } from './data/translations'
 import './index.css'
 
@@ -107,7 +108,8 @@ function Hero({ featured, onPlay, t }) {
    App
    ═══════════════════════════════════════════════════════════════════════ */
 export default function App() {
-  const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB()
+  const auth = useAuth()
+  const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth)
   
   // Settings with Persistence
   const [lang, setLang] = useState(() => localStorage.getItem('strm-lang') || 'en')
@@ -145,6 +147,11 @@ export default function App() {
     }
   }, [category, country, pagesMap])
 
+  // Global Navigation Listener: Auto-dismiss player when category or country changes
+  useEffect(() => {
+    setActiveItem(null)
+  }, [category, country])
+
   // Data mapping (API now handles regional filtering)
   const currentCategoryData = itemsMap[category] || { library: [], top: [], trending: [], recent: [], popular: [] }
   
@@ -166,6 +173,8 @@ export default function App() {
         currentTheme={theme} setTheme={setTheme}
         currentCategory={category} setCategory={setCategory}
         currentCountry={country} setCountry={setCountry}
+        auth={auth}
+        clearActiveItem={() => setActiveItem(null)}
       />
 
 
@@ -177,6 +186,8 @@ export default function App() {
               item={activeItem}
               onBack={() => setActiveItem(null)}
               t={t}
+              auth={auth}
+              resetCategory={resetCategory}
             />
           ) : (
             <motion.main

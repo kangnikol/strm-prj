@@ -79,7 +79,7 @@ async function tmdbFetch(path, params = '') {
  * Dynamically fetches content from TMDB with Infinite Scroll support.
  * Manages paginated state for each category independently, including editorial sections.
  */
-export function useTMDB() {
+export function useTMDB(auth) {
   const initialState = { library: [], top: [], trending: [], recent: [], popular: [] }
   const [itemsMap, setItemsMap] = useState({
     all:    { ...initialState },
@@ -89,9 +89,11 @@ export function useTMDB() {
     cdrama: { ...initialState },
     movie:  { ...initialState },
     series: { ...initialState },
+    favorites: { ...initialState },
+    watchlist: { ...initialState },
   })
   
-  const [pagesMap,  setPagesMap ] = useState({ all: 0, anime: 0, kdrama: 0, jdrama: 0, cdrama: 0, movie: 0, series: 0 })
+  const [pagesMap,  setPagesMap ] = useState({ all: 0, anime: 0, kdrama: 0, jdrama: 0, cdrama: 0, movie: 0, series: 0, favorites: 0, watchlist: 0 })
   const [loading,   setLoading  ] = useState(false)
   const [error,     setError    ] = useState(null)
   const [usingMock, setUsingMock] = useState(false)
@@ -122,55 +124,78 @@ export function useTMDB() {
       let filters = ''
       let force   = cat === 'all' ? null : cat
       
-      if (cat === 'anime') {
-        filters = '&with_original_language=ja&with_genres=16'
-      } else if (cat === 'kdrama') {
-        filters = '&with_original_language=ko'
-      } else if (cat === 'jdrama') {
-        filters = '&with_original_language=ja&without_genres=16'
-      } else if (cat === 'cdrama') {
-        filters = '&with_original_language=zh|cn'
-      }
-
-      // Parallel fetching for different sections on first load
-      if (isFirstLoad) {
-        // Build the query endpoints. 
-        // For 'all' category, filters will just be empty string, performing global discoveries.
-        const [libM, libT, topM, topT, recM, recT, popM, popT, trendAll] = await Promise.all([
-          tmdbFetch('/discover/movie', `${filters}&sort_by=popularity.desc&page=1${countryParam}`),
-          tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=1${countryParam}`),
-          tmdbFetch('/discover/movie', `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`),
-          tmdbFetch('/discover/tv',    `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`),
-          tmdbFetch('/discover/movie', `${filters}&sort_by=primary_release_date.desc&page=1${countryParam}`),
-          tmdbFetch('/discover/tv',    `${filters}&sort_by=first_air_date.desc&page=1${countryParam}`),
-          tmdbFetch('/discover/movie', `${filters}&sort_by=revenue.desc&page=1${countryParam}`),
-          tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=2${countryParam}`),
-          tmdbFetch('/trending/all/week', `&page=1`) // Trending is always global for diversity
-        ])
-
-        results.library  = shuffle([...(libM.results || []), ...(libT.results || [])]).map(i => normalise(i, force))
-        results.top      = shuffle([...(topM.results || []), ...(topT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
-        results.recent   = shuffle([...(recM.results || []), ...(recT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
-        results.popular  = shuffle([...(popM.results || []), ...(popT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
+      // Personal User Libraries Interception
+      if (cat === 'favorites' || cat === 'watchlist') {
+        if (!auth?.sessionId || !auth?.account?.id) {
+          setError("Session required. Please log in.")
+          setLoading(false)
+          return
+        }
         
-        // Local filter for trending row (ensures relevant content for the tab)
-        const targetLangs = cat === 'cdrama' ? ['zh', 'cn'] : [cat === 'kdrama' ? 'ko' : 'ja']
-        results.trending = (trendAll.results || [])
-          .map(i => normalise(i))
-          .filter(i => {
-            if (cat === 'all') return true
-            if (cat === 'anime') return i.category === 'anime'
-            if (cat === 'jdrama') return i.category === 'jdrama'
-            return targetLangs.includes(i.original_language) || i.category === cat
-          })
-          .slice(0, 10)
-      } else {
-        // Just fetch more for library
+        const pathCat = cat === 'favorites' ? 'favorite' : 'watchlist'
+        const mPath = `/account/${auth.account.id}/${pathCat}/movies`
+        const tPath = `/account/${auth.account.id}/${pathCat}/tv`
+        const authParams = `&session_id=${auth.sessionId}`
+        
         const [m, t] = await Promise.all([
-          tmdbFetch('/discover/movie', `${filters}${baseParams}`),
-          tmdbFetch('/discover/tv',    `${filters}${baseParams}`)
+          tmdbFetch(mPath, `&sort_by=created_at.desc&page=${nextPage}${authParams}`),
+          tmdbFetch(tPath, `&sort_by=created_at.desc&page=${nextPage}${authParams}`)
         ])
-        results.library = shuffle([...(m.results || []), ...(t.results || [])]).map(i => normalise(i, force))
+        
+        results.library = shuffle([...(m.results || []), ...(t.results || [])]).map(i => normalise(i))
+        
+        // Skip discovery parallel fetch
+      } else {
+        if (cat === 'anime') {
+          filters = '&with_original_language=ja&with_genres=16'
+        } else if (cat === 'kdrama') {
+          filters = '&with_original_language=ko'
+        } else if (cat === 'jdrama') {
+          filters = '&with_original_language=ja&without_genres=16'
+        } else if (cat === 'cdrama') {
+          filters = '&with_original_language=zh|cn'
+        }
+
+        // Parallel fetching for different sections on first load
+        if (isFirstLoad) {
+          // Build the query endpoints. 
+          // For 'all' category, filters will just be empty string, performing global discoveries.
+          const [libM, libT, topM, topT, recM, recT, popM, popT, trendAll] = await Promise.all([
+            tmdbFetch('/discover/movie', `${filters}&sort_by=popularity.desc&page=1${countryParam}`),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=1${countryParam}`),
+            tmdbFetch('/discover/movie', `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`),
+            tmdbFetch('/discover/movie', `${filters}&sort_by=primary_release_date.desc&page=1${countryParam}`),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=first_air_date.desc&page=1${countryParam}`),
+            tmdbFetch('/discover/movie', `${filters}&sort_by=revenue.desc&page=1${countryParam}`),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=2${countryParam}`),
+            tmdbFetch('/trending/all/week', `&page=1`) // Trending is always global for diversity
+          ])
+
+          results.library  = shuffle([...(libM.results || []), ...(libT.results || [])]).map(i => normalise(i, force))
+          results.top      = shuffle([...(topM.results || []), ...(topT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
+          results.recent   = shuffle([...(recM.results || []), ...(recT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
+          results.popular  = shuffle([...(popM.results || []), ...(popT.results || [])]).map(i => normalise(i, force)).slice(0, 10)
+          
+          // Local filter for trending row (ensures relevant content for the tab)
+          const targetLangs = cat === 'cdrama' ? ['zh', 'cn'] : [cat === 'kdrama' ? 'ko' : 'ja']
+          results.trending = (trendAll.results || [])
+            .map(i => normalise(i))
+            .filter(i => {
+              if (cat === 'all') return true
+              if (cat === 'anime') return i.category === 'anime'
+              if (cat === 'jdrama') return i.category === 'jdrama'
+              return targetLangs.includes(i.original_language) || i.category === cat
+            })
+            .slice(0, 10)
+        } else {
+          // Just fetch more for library
+          const [m, t] = await Promise.all([
+            tmdbFetch('/discover/movie', `${filters}${baseParams}`),
+            tmdbFetch('/discover/tv',    `${filters}${baseParams}`)
+          ])
+          results.library = shuffle([...(m.results || []), ...(t.results || [])]).map(i => normalise(i, force))
+        }
       }
 
       setItemsMap(prev => {

@@ -28,7 +28,7 @@ function StrmLogo({ onClick }) {
 }
 
 /* ── Dropdown Component ──────────────────────────────────────────────── */
-function Dropdown({ icon: Icon, label, options, value, onChange, id }) {
+function Dropdown({ icon: Icon, avatar, label, options, value, onChange, id }) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
 
@@ -50,7 +50,12 @@ function Dropdown({ icon: Icon, label, options, value, onChange, id }) {
         className="flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase text-ctp-overlay1 hover:text-ctp-text hover:bg-ctp-surface0 transition-colors duration-200"
         whileTap={{ scale: 0.95 }}
       >
-        <Icon size={12} strokeWidth={1.5} />
+        {Icon && <Icon size={12} strokeWidth={1.5} />}
+        {avatar && (
+          <div className="w-5 h-5 rounded-full text-ctp-crust text-[10px] font-bold flex items-center justify-center transition-all duration-200 bg-ctp-accent" style={{ background: 'linear-gradient(135deg, var(--strm-accent), var(--strm-secondary))' }}>
+            {avatar}
+          </div>
+        )}
         {label && <span className="hidden lg:inline">{label}</span>}
         <ChevronDown size={10} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </motion.button>
@@ -101,7 +106,9 @@ export default function Navbar({
   currentLang, setLang, 
   currentTheme, setTheme,
   currentCategory, setCategory,
-  currentCountry, setCountry 
+  currentCountry, setCountry,
+  auth,
+  clearActiveItem
 }) {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
@@ -162,7 +169,7 @@ export default function Navbar({
       transition={{ ...SPRING, delay: 0.05 }}
     >
       {/* Logo */}
-      <StrmLogo onClick={() => setCategory('all')} />
+      <StrmLogo onClick={() => { setCategory('all'); if(clearActiveItem) clearActiveItem(); }} />
 
       <div className="w-px h-5 bg-ctp-surface flex-shrink-0 mx-1" />
 
@@ -174,7 +181,7 @@ export default function Navbar({
             <motion.button
               key={value}
               id={`nav-${value}`}
-              onClick={() => setCategory(value)}
+              onClick={() => { setCategory(value); if(clearActiveItem) clearActiveItem(); }}
               className={`group relative px-3 py-1.5 text-[10px] font-black tracking-[0.2em] uppercase transition-colors duration-200 overflow-hidden ${
                 isActive ? 'text-[var(--strm-crust)]' : 'text-ctp-overlay1 hover:text-[var(--strm-crust)]'
               }`}
@@ -259,25 +266,37 @@ export default function Navbar({
           <span className="hidden lg:inline">API</span>
         </motion.a>
 
-        {/* <div className="w-px h-5 bg-ctp-surface mx-1" />
-
-        <motion.button
-          id="notifications-btn"
-          aria-label="Notifications"
-          className="relative p-2 rounded text-ctp-overlay1 hover:text-ctp-text hover:bg-ctp-surface transition-colors duration-150"
-          whileTap={{ scale: 0.9 }}
-        >
-          <Bell size={14} strokeWidth={1.5} />
-          <span className="absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-ctp-accent" />
-        </motion.button>
-
-        <button
-          id="user-avatar-btn"
-          className="w-7 h-7 rounded-full ml-1 text-ctp-crust text-[10px] font-bold flex items-center justify-center transition-all duration-200"
-          style={{ background: 'linear-gradient(135deg, var(--strm-accent), var(--strm-secondary))' }}
-        >
-          U
-        </button> */}
+        <div className="w-px h-5 bg-ctp-surface mx-1" />
+        
+        {auth?.loading ? (
+          <div className="w-8 h-8 rounded-full bg-ctp-surface animate-pulse z-100" />
+        ) : auth?.account ? (
+          <Dropdown 
+            id="user-dropdown"
+            avatar={auth.account.username ? auth.account.username.charAt(0).toUpperCase() : 'U'}
+            options={[
+              { label: 'Favorites', value: 'favorites' },
+              { label: 'Watchlist', value: 'watchlist' },
+              { label: 'Log Out', value: 'logout' }
+            ]}
+            value={currentCategory}
+            onChange={(val) => {
+              if (val === 'logout') auth.logout()
+              else {
+                setCategory(val);
+                if (clearActiveItem) clearActiveItem();
+              }
+            }}
+          />
+        ) : (
+          <motion.button
+            onClick={auth?.login}
+            className="flex items-center gap-1.5 px-3 py-1.5 ml-1 rounded text-[10px] font-bold tracking-widest uppercase bg-ctp-accent text-ctp-crust hover:bg-ctp-text transition-colors duration-200"
+            whileTap={{ scale: 0.95 }}
+          >
+            Log In
+          </motion.button>
+        )}
       </div>
     </motion.header>
   )
