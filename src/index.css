@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════
+   strm — Multi-Theme Design System (Swiss Style)
+   ═══════════════════════════════════════════════════════ */
+
+@theme {
+  /* 
+     Base colors that adapt to [data-theme]
+  */
+  --color-bg:            var(--strm-bg);
+  --color-mantle:        var(--strm-mantle);
+  --color-crust:         var(--strm-crust);
+  --color-surface:       var(--strm-surface);
+  --color-surface1:       var(--strm-surface1);
+  --color-text:          var(--strm-text);
+  --color-overlay:       var(--strm-overlay);
+  --color-accent:        var(--strm-accent);
+  --color-secondary:     var(--strm-secondary);
+  --color-yellow:        var(--strm-yellow);
+
+  /* Typography */
+  --font-sans:  'Inter', system-ui, sans-serif;
+  --font-brand: 'Inter', system-ui, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Theme Variable Definitions
+   ═══════════════════════════════════════════════════════ */
+
+:root, [data-theme="mocha"] {
+  --strm-bg:            #1e1e2e;
+  --strm-mantle:        #181825;
+  --strm-crust:         #11111b;
+  --strm-surface:       #313244;
+  --strm-surface1:       #45475a;
+  --strm-text:          #cdd6f4;
+  --strm-overlay:       #6c7086;
+  --strm-accent:        #89b4fa; /* Blue */
+  --strm-secondary:     #f5c2e7; /* Pink */
+  --strm-yellow:        #f9e2af;
+}
+
+[data-theme="rose-pine"] {
+  --strm-bg:            #191724;
+  --strm-mantle:        #1f1d2e;
+  --strm-crust:         #11111b;
+  --strm-surface:       #26233a;
+  --strm-surface1:       #31748f;
+  --strm-text:          #e0def4;
+  --strm-overlay:       #908caa;
+  --strm-accent:        #ebbcba; /* Rose */
+  --strm-secondary:     #c4a7e7; /* Iris */
+  --strm-yellow:        #f6c177;
+}
+
+[data-theme="dracula"] {
+  --strm-bg:            #282a36;
+  --strm-mantle:        #1e1f29;
+  --strm-crust:         #0d0d14;
+  --strm-surface:       #44475a;
+  --strm-surface1:       #6272a4;
+  --strm-text:          #f8f8f2;
+  --strm-overlay:       #94a1b2;
+  --strm-accent:        #bd93f9; /* Purple */
+  --strm-secondary:     #ff79c6; /* Pink */
+  --strm-yellow:        #f1fa8c;
+}
+
+[data-theme="nord"] {
+  --strm-bg:            #2e3440;
+  --strm-mantle:        #3b4252;
+  --strm-crust:         #242933;
+  --strm-surface:       #434c5e;
+  --strm-surface1:       #4c566a;
+  --strm-text:          #d8dee9;
+  --strm-overlay:       #a3be8c;
+  --strm-accent:        #88c0d0; /* Frost */
+  --strm-secondary:     #81a1c1; /* Blue */
+  --strm-yellow:        #ebcb8b;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Global Reset & UI Styles (Theme-Aware)
+   ═══════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--strm-bg);
+  color: var(--strm-text);
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  width: 100%;
+  min-height: 100svh;
+}
+
+/* Kinetic Logo */
+.logo-text {
+  position: relative;
+  display: inline-block;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--strm-text);
+}
+
+.logo-text::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: var(--strm-accent);
+  animation: glitch-shift 6s infinite;
+  pointer-events: none;
+}
+
+.logo-text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: var(--strm-secondary);
+  animation: glitch-shift 6s infinite reverse;
+  animation-delay: 0.08s;
+  pointer-events: none;
+}
+
+@keyframes glitch-shift {
+  0%,  100% { transform: translate(0,0);    opacity: 0; }
+  20%        { transform: translate(-2px,0); opacity: 0.5; }
+  40%        { transform: translate(2px,0);  opacity: 0.3; }
+  60%        { transform: translate(-1px,0); opacity: 0.4; }
+  80%        { transform: translate(1px,0);  opacity: 0.2; }
+}
+
+/* VideoCard Thumbnails */
+.thumb-grid {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--strm-mantle);
+  cursor: pointer;
+}
+
+.thumb-grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.thumb-grid:hover img {
+  transform: scale(1.05);
+}
+
+.thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.thumb-grid:hover .thumb-overlay {
+  opacity: 1;
+}
+
+.play-btn-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.thumb-grid:hover .play-btn-center {
+  opacity: 1;
+}
+
+/* Marquee Track */
+.marquee-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+/* Search Input */
+.search-field {
+  background: var(--strm-mantle);
+  border: 1px solid var(--strm-surface);
+  border-radius: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-field:focus-within {
+  border-color: var(--strm-accent);
+  box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.1);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar          { width: 3px; }
+::-webkit-scrollbar-track    { background: var(--strm-bg); }
+::-webkit-scrollbar-thumb    { background: var(--strm-surface); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--strm-overlay); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Swis horizontal rule */
+.swiss-rule {
+  border: none;
+  border-top: 1px solid var(--strm-surface);
+  margin: 0;
+}
+
+/* Badge Live Pulse */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+.badge-live-pulse { animation: pulse-live 1.6s ease-in-out infinite; }
