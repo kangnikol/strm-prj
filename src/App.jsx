@@ -10,6 +10,7 @@ import Marquee     from './components/Marquee'
 import SectionRow   from './components/SectionRow'
 import InfiniteScroll from './components/InfiniteScroll'
 import SearchBar    from './components/SearchBar'
+import LoginModal   from './components/LoginModal'
 import { useTMDB }  from './hooks/useTMDB'
 import { useSearch } from './hooks/useSearch'
 import { useAuth }  from './hooks/useAuth'
@@ -29,9 +30,12 @@ function Hero({ featured, onPlay, t }) {
       id="hero"
       className="relative w-full grid grid-cols-12 gap-4 mb-0 overflow-hidden"
       initial={{ opacity: 0, height: 0, minHeight: 0 }}
-      animate={{ opacity: 1, height: 'auto', minHeight: 380, transition: { duration: 0.4 } }}
+      animate={{ opacity: 1, height: 'auto', minHeight: 460, transition: { duration: 0.4 } }}
       exit={{ opacity: 0, height: 0, minHeight: 0, transition: { duration: 0.3 } }}
     >
+      {/* Dim overlay behind text exclusively on mobile to guarantee readability over full-bleed images */}
+      <div className="absolute inset-0 z-[5] bg-ctp-base/30 lg:hidden pointer-events-none" />
+
       <div className="col-span-12 lg:col-span-7 flex flex-col justify-end p-6 lg:p-10 z-10 relative">
         <motion.div
           className="flex items-center gap-3 mb-4"
@@ -93,7 +97,7 @@ function Hero({ featured, onPlay, t }) {
         </motion.div>
       </div>
 
-      <div className="hidden lg:flex col-span-5 relative items-stretch">
+      <div className="absolute inset-0 z-0 lg:relative lg:flex lg:col-span-5 items-stretch">
         <div
           className="absolute inset-0 z-0"
           style={{
@@ -102,8 +106,8 @@ function Hero({ featured, onPlay, t }) {
             backgroundPosition: 'center',
           }}
         />
-        <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to right, var(--strm-bg) 0%, transparent 60%)' }} />
-        <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to top, var(--strm-bg) 0%, transparent 50%)' }} />
+        <div className="hidden lg:block absolute inset-0 z-10" style={{ background: 'linear-gradient(to right, var(--strm-bg) 0%, transparent 60%)' }} />
+        <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to top, var(--strm-bg) 0%, transparent 60%)' }} />
       </div>
     </motion.section>
   )
@@ -117,7 +121,14 @@ export default function App() {
   const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth)
   
   // Settings with Persistence
-  const [lang, setLang] = useState(() => localStorage.getItem('strm-lang') || 'en')
+  const [lang, setLang] = useState(() => {
+    const saved = localStorage.getItem('strm-lang')
+    if (saved) return saved
+    // Auto-detect from device locale
+    const deviceLang = navigator.language?.slice(0, 2).toLowerCase()
+    const supported = ['en', 'id', 'jp', 'kr', 'es']
+    return supported.includes(deviceLang) ? deviceLang : 'en'
+  })
   const [theme, setTheme] = useState(() => localStorage.getItem('strm-theme') || 'mocha')
   
   // UI State
@@ -125,6 +136,7 @@ export default function App() {
   const [country, setCountry] = useState('all')
   const [activeItem, setActiveItem] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isLoginOpen, setIsLoginOpen] = useState(false)
 
   const t = translations[lang]
 
@@ -196,6 +208,13 @@ export default function App() {
         currentCountry={country} setCountry={setCountry}
         auth={auth}
         clearActiveItem={() => setActiveItem(null)}
+        onOpenLogin={() => setIsLoginOpen(true)}
+      />
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLogin={() => { setIsLoginOpen(false); auth.login() }}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -258,12 +277,12 @@ export default function App() {
                       <div>
                         <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
                           <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">
-                            Full Library
+                            Discover
                           </h3>
                           <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{filteredLibrary.length} {t.titles}</span>
                         </div>
 
-                        <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
+                        <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-1 md:px-6">
                           {gridItems.map((item, i) => {
                             const isLarge = category === 'all' && i < 2
                             return (

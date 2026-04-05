@@ -80,6 +80,20 @@
   --strm-yellow:        #ebcb8b;
 }
 
+[data-theme="amoled"] {
+  --strm-bg:            #000000;
+  --strm-mantle:        #080808;
+  --strm-crust:         #000000;
+  --strm-surface:       #111111;
+  --strm-surface1:      #1a1a1a;
+  --strm-text:          #ffffff;
+  --strm-overlay:       #555555;
+  --strm-accent:        #00e5ff; /* Cyan */
+  --strm-secondary:     #7c4dff; /* Violet */
+  --strm-yellow:        #ffd740;
+}
+
+
 /* ═══════════════════════════════════════════════════════
    Global Reset & UI Styles (Theme-Aware)
    ═══════════════════════════════════════════════════════ */

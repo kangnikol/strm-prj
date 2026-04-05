@@ -123,7 +123,7 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
   return (
     <motion.div
       id="player-view"
-      className="flex flex-col w-full h-full overflow-hidden bg-ctp-crust"
+      className="flex flex-col w-full h-full overflow-y-auto md:overflow-hidden no-scrollbar bg-ctp-crust"
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -24 }}
@@ -171,45 +171,47 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
       </div>
 
       {/* ── Main Content ─────────────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row gap-0 flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-col md:flex-row gap-0 md:flex-1 md:min-h-0 md:overflow-hidden">
 
-        {/* Player Iframe */}
+        {/* Player Iframe — sticky on mobile, flex on desktop */}
         <motion.div
-          className="flex-1 bg-ctp-crust relative min-h-[300px]"
+          className="sticky top-0 z-30 w-full aspect-video md:aspect-auto md:static md:flex-1 bg-ctp-crust relative"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <div className="absolute inset-0 bg-ctp-crust">
-            <iframe
-              id="vidking-player"
-              src={vidkingUrl}
-              title={item.title}
-              allowFullScreen
-              allow="fullscreen; autoplay; encrypted-media"
-              className="w-full h-full border-0 object-cover"
-              style={{ background: '#11111b' }}
-            />
-          </div>
+          <iframe
+            id="vidking-player"
+            src={vidkingUrl}
+            title={item.title}
+            allowFullScreen
+            allow="fullscreen; autoplay; encrypted-media"
+            className="w-full h-full border-0"
+            style={{ background: '#11111b' }}
+          />
         </motion.div>
 
         {/* ── Metadata Panel ─────────────────────────────────────────── */}
         <motion.aside
-          className="w-full lg:w-80 flex-shrink-0 bg-ctp-mantle border-l border-ctp-surface p-6 flex flex-col gap-6 overflow-y-auto no-scrollbar"
+          className="w-full md:w-80 flex-shrink-0 bg-ctp-mantle md:border-l md:border-ctp-surface flex flex-col gap-0 md:gap-6 md:overflow-y-auto no-scrollbar"
           initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ ...SPRING, delay: 0.15 }}
         >
-          {/* Main Info */}
-          <div className="flex-shrink-0 space-y-6">
-            {/* Poster */}
-            <div className="thumb-grid aspect-[2/3] w-32 mx-auto rounded overflow-hidden shadow-lg border border-ctp-surface/20">
+          {/* Mobile Header Section — Hero backdrop only covers this block */}
+          <div className="relative overflow-hidden md:contents">
+            {/* Backdrop — mobile only */}
+            <div className="md:hidden absolute inset-0 z-0 pointer-events-none">
               <img
-                src={item.posterUrl}
-                alt={item.title}
-                className="w-full h-full object-cover"
+                src={item.backdropUrl || item.posterUrl}
+                alt=""
+                className="w-full h-full object-cover object-top"
               />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, var(--strm-bg) 0%, rgba(17,17,27,0.75) 55%, transparent 100%)' }} />
             </div>
+
+            {/* Header content above backdrop */}
+            <div className="relative z-10 p-6 pb-6 flex flex-col gap-6">
 
             {/* Title */}
             <div>
@@ -257,9 +259,11 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
                 </p>
               </div>
             )}
-          </div>
+            </div>{/* end header content */}
+          </div>{/* end mobile header section */}
 
-          {/* Episode Selector for TV */}
+          {/* Episode Selector and rest — outside backdrop scope, plain bg */}
+          <div className="p-6 flex flex-col gap-6">
           {isTV && seasons.length > 0 && (
             <div className="flex flex-col mt-4">
                <hr className="swiss-rule mb-6" />
@@ -313,7 +317,7 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
                   </div>
                </div>
 
-               {/* Episode List (Now expands fully with the parent scroll) */}
+               {/* Episode List */}
                <div className="w-full">
                  {loadingEpisodes ? (
                     <div className="flex items-center justify-center p-8">
@@ -323,7 +327,6 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
                     <div className="flex flex-col gap-2 relative">
                       {episodes.map(ep => {
                          const isPlaying = activeEpisode === ep.episode_number
-                         // Fallback to series backdrop if no episode still exists
                          const thumbSource = ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : item.backdropUrl
                          return (
                            <button
@@ -358,6 +361,7 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
             </div>
           )}
 
+          </div>{/* end lower section */}
         </motion.aside>
       </div>
     </motion.div>

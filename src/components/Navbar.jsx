@@ -27,8 +27,69 @@ function StrmLogo({ onClick }) {
   )
 }
 
+/* ── Nav Dropdown (Drama group) ─────────────────────────────────────── */
+function NavDropdown({ label, options, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef(null)
+  const isDramaActive = options.some(o => o.value === value)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`group relative flex items-center gap-1 px-3 py-1.5 text-[10px] font-black tracking-[0.2em] uppercase transition-colors duration-200 overflow-hidden ${
+          isDramaActive ? 'text-[var(--strm-crust)]' : 'text-ctp-overlay1 hover:text-[var(--strm-crust)]'
+        }`}
+        whileTap={{ scale: 0.92 }}
+      >
+        <div className={`absolute inset-0 bg-[var(--strm-text)] origin-left transition-transform duration-300 ease-out z-0 ${
+          isDramaActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+        }`} />
+        <span className="relative z-10">{label}</span>
+        <ChevronDown size={9} className={`relative z-10 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+            className="absolute left-0 top-full mt-1.5 w-40 bg-ctp-mantle/95 backdrop-blur-md border border-ctp-surface shadow-2xl z-50 overflow-hidden"
+          >
+            {options.map(opt => {
+              const isActive = value === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => { onChange(opt.value); setIsOpen(false) }}
+                  className={`group relative w-full text-left px-4 py-2.5 text-[10px] font-bold tracking-widest uppercase transition-colors duration-200 overflow-hidden ${
+                    isActive ? 'text-[var(--strm-crust)]' : 'text-ctp-overlay1 hover:text-[var(--strm-crust)]'
+                  }`}
+                >
+                  <div className={`absolute inset-0 bg-[var(--strm-text)] origin-left transition-transform duration-300 ease-out z-0 ${
+                    isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                  }`} />
+                  <span className="relative z-10">{opt.label}</span>
+                </button>
+              )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 /* ── Dropdown Component ──────────────────────────────────────────────── */
-function Dropdown({ icon: Icon, avatar, label, options, value, onChange, id }) {
+function Dropdown({ icon: Icon, avatar, label, options, value, onChange, id, forceLabel = false }) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
 
@@ -47,7 +108,7 @@ function Dropdown({ icon: Icon, avatar, label, options, value, onChange, id }) {
       <motion.button
         id={id}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase text-ctp-overlay1 hover:text-ctp-text hover:bg-ctp-surface0 transition-colors duration-200"
+        className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold tracking-widest uppercase text-ctp-overlay1 hover:text-ctp-text hover:bg-ctp-surface0 transition-colors duration-200"
         whileTap={{ scale: 0.95 }}
       >
         {Icon && <Icon size={12} strokeWidth={1.5} />}
@@ -56,7 +117,7 @@ function Dropdown({ icon: Icon, avatar, label, options, value, onChange, id }) {
             {avatar}
           </div>
         )}
-        {label && <span className="hidden lg:inline">{label}</span>}
+        {label && <span className={forceLabel ? "inline" : "hidden lg:inline"}>{label}</span>}
         <ChevronDown size={10} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </motion.button>
 
@@ -67,7 +128,7 @@ function Dropdown({ icon: Icon, avatar, label, options, value, onChange, id }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ ...SPRING, duration: 0.2 }}
-            className="absolute right-0 mt-2 w-48 bg-ctp-mantle/95 backdrop-blur-md border border-ctp-surface rounded shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-48 bg-ctp-mantle/95 backdrop-blur-md border border-ctp-surface shadow-2xl z-50 overflow-hidden"
           >
             <div className="py-1 max-h-64 overflow-y-auto no-scrollbar">
               {options.map((opt) => {
@@ -108,7 +169,8 @@ export default function Navbar({
   currentCategory, setCategory,
   currentCountry, setCountry,
   auth,
-  clearActiveItem
+  clearActiveItem,
+  onOpenLogin
 }) {
   const categories = [
     { label: t.movie, value: 'movie' },
@@ -134,6 +196,7 @@ export default function Navbar({
     { label: 'Rosé Pine', value: 'rose-pine' },
     { label: 'Dracula', value: 'dracula' },
     { label: 'Nord', value: 'nord' },
+    { label: 'AMOLED', value: 'amoled' },
   ]
 
   const languages = [
@@ -157,9 +220,25 @@ export default function Navbar({
 
       <div className="w-px h-5 bg-ctp-surface flex-shrink-0 mx-1" />
 
-      {/* Nav links — Categories — Scrollable on mobile */}
-      <nav className="flex items-center gap-1 overflow-x-auto overflow-y-hidden no-scrollbar py-2" aria-label="Categories">
-        {categories.map(({ label, value }) => {
+      {/* Mobile Category Dropdown */}
+      <div className="md:hidden">
+        <Dropdown 
+          id="category-selector-mobile"
+          label={categories.find(c => c.value === currentCategory)?.label || t.discover || 'Category'}
+          options={categories}
+          value={currentCategory}
+          onChange={(val) => {
+            setCategory(val);
+            if (clearActiveItem) clearActiveItem();
+          }}
+          forceLabel={true}
+        />
+      </div>
+
+      {/* Desktop Category Links */}
+      <nav className="hidden md:flex items-center gap-1 py-2" aria-label="Categories">
+        {/* Standalone categories: all, movie, series, anime */}
+        {categories.filter(c => !['kdrama','jdrama','cdrama'].includes(c.value)).map(({ label, value }) => {
           const isActive = currentCategory === value;
           return (
             <motion.button
@@ -171,7 +250,6 @@ export default function Navbar({
               }`}
               whileTap={{ scale: 0.92 }}
             >
-              {/* Highlight Background Effect */}
               <div 
                 className={`absolute inset-0 bg-[var(--strm-text)] origin-left transition-transform duration-300 ease-out z-0 ${
                   isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
@@ -181,30 +259,46 @@ export default function Navbar({
             </motion.button>
           )
         })}
+
+        {/* Drama dropdown: kdrama, jdrama, cdrama */}
+        <NavDropdown
+          label={t.drama || 'Drama'}
+          options={[
+            { label: t.kdrama, value: 'kdrama' },
+            { label: t.jdrama, value: 'jdrama' },
+            { label: t.cdrama, value: 'cdrama' },
+          ]}
+          value={currentCategory}
+          onChange={(val) => { setCategory(val); if(clearActiveItem) clearActiveItem(); }}
+        />
       </nav>
 
       {/* Spacer */}
       <div className="flex-1 min-w-[20px]" />
 
-      {/* Country Dropdown */}
-      <Dropdown 
-        id="country-selector"
-        icon={MapPin} 
-        label={t.country} 
-        options={countries} 
-        value={currentCountry} 
-        onChange={setCountry} 
-      />
-
-      {/* Action Selectors (Theme/Lang) */}
-      <div className="flex items-center gap-0.5 flex-shrink-0">
+      {/* Country Dropdown — desktop only */}
+      <div className="hidden md:block">
         <Dropdown 
-          id="lang-selector"
-          icon={Globe} 
-          options={languages} 
-          value={currentLang} 
-          onChange={setLang} 
+          id="country-selector"
+          icon={MapPin} 
+          label={t.country} 
+          options={countries} 
+          value={currentCountry} 
+          onChange={setCountry} 
         />
+      </div>
+
+      {/* Action Selectors — Lang hidden on mobile (follows device), Theme always visible */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <div className="hidden md:flex">
+          <Dropdown 
+            id="lang-selector"
+            icon={Globe} 
+            options={languages} 
+            value={currentLang} 
+            onChange={setLang} 
+          />
+        </div>
         
         <Dropdown 
           id="theme-selector"
@@ -220,7 +314,7 @@ export default function Navbar({
           href="https://www.vidking.net"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase text-ctp-overlay1 hover:text-ctp-text hover:bg-ctp-surface0 transition-colors duration-200"
+          className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold tracking-widest uppercase text-ctp-overlay1 hover:text-ctp-text hover:bg-ctp-surface0 transition-colors duration-200"
           whileTap={{ scale: 0.95 }}
         >
           <Code size={12} strokeWidth={1.5} />
@@ -228,7 +322,10 @@ export default function Navbar({
         </motion.a>
 
         <div className="w-px h-5 bg-ctp-surface mx-1" />
-        
+      </div>
+
+      {/* User Auth — always visible */}
+      <div className="flex items-center flex-shrink-0">
         {auth?.loading ? (
           <div className="w-8 h-8 rounded-full bg-ctp-surface animate-pulse z-100" />
         ) : auth?.account ? (
@@ -238,25 +335,23 @@ export default function Navbar({
             options={[
               { label: 'Favorites', value: 'favorites' },
               { label: 'Watchlist', value: 'watchlist' },
+              { label: 'Vidking API', value: 'api' },
               { label: 'Log Out', value: 'logout' }
             ]}
             value={currentCategory}
             onChange={(val) => {
-              if (val === 'logout') auth.logout()
-              else {
+              if (val === 'logout') {
+                auth.logout()
+              } else if (val === 'api') {
+                window.open('https://www.vidking.net', '_blank', 'noopener,noreferrer')
+              } else {
                 setCategory(val);
                 if (clearActiveItem) clearActiveItem();
               }
             }}
           />
         ) : (
-          <motion.button
-            onClick={auth?.login}
-            className="flex items-center gap-1.5 px-3 py-1.5 ml-1 rounded text-[10px] font-bold tracking-widest uppercase bg-ctp-accent text-ctp-crust hover:bg-ctp-text transition-colors duration-200"
-            whileTap={{ scale: 0.95 }}
-          >
-            Log In
-          </motion.button>
+          null
         )}
       </div>
     </motion.header>
