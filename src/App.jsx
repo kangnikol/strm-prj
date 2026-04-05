@@ -9,15 +9,17 @@ import KineticText from './components/KineticText'
 import Marquee     from './components/Marquee'
 import SectionRow   from './components/SectionRow'
 import InfiniteScroll from './components/InfiniteScroll'
-import SearchBar    from './components/SearchBar'
-import LoginModal   from './components/LoginModal'
-import { useTMDB }  from './hooks/useTMDB'
-import { useSearch } from './hooks/useSearch'
-import { useAuth }  from './hooks/useAuth'
+import SearchBar       from './components/SearchBar'
+import LoginModal      from './components/LoginModal'
+import ContinueWatching from './components/ContinueWatching'
+import { useTMDB }     from './hooks/useTMDB'
+import { useSearch }   from './hooks/useSearch'
+import { useAuth }     from './hooks/useAuth'
+import { useHistory }  from './hooks/useHistory'
 import { translations } from './data/translations'
 import './index.css'
 
-const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
+const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
 /* ═══════════════════════════════════════════════════════════════════════
    Hero Section — Asymmetric Swiss layout
@@ -119,6 +121,7 @@ function Hero({ featured, onPlay, t }) {
 export default function App() {
   const auth = useAuth()
   const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth)
+  const { history, addOrUpdate: addHistory, updateProgress: updateHistoryProgress, removeEntry: removeHistory } = useHistory()
   
   // Settings with Persistence
   const [lang, setLang] = useState(() => {
@@ -227,6 +230,9 @@ export default function App() {
               t={t}
               auth={auth}
               resetCategory={resetCategory}
+              onHistoryUpdate={(item, elapsed, season, episode) => {
+                addHistory(item, { elapsedSeconds: elapsed, season, episode })
+              }}
             />
           ) : (
             <motion.main
@@ -236,7 +242,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.15 }}
             >
               {loading && filteredLibrary.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-ctp-overlay py-32">
@@ -264,6 +270,16 @@ export default function App() {
                       )}
 
                       <section className="py-10 pb-24 px-10">
+                    {/* Continue Watching — only on homepage, no search */}
+                      {!searchQuery && category === 'all' && (
+                        <ContinueWatching
+                          history={history}
+                          onPlay={(entry) => setActiveItem(entry)}
+                          onRemove={removeHistory}
+                          t={t}
+                        />
+                      )}
+
                     {/* Featured Rows */}
                     <div className="flex flex-col gap-2 mb-16">
                       <SectionRow title={`Top Rated ${category === 'all' ? 'Titles' : t[category] || category}`} items={filteredTop} onPlay={setActiveItem} t={t} />

@@ -2,7 +2,7 @@ import React, { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Play, Star } from 'lucide-react'
 
-const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
+const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
 const cardVariants = {
   hidden:  { y: 40, opacity: 0 },

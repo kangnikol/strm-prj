@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Star, ChevronDown, PlayCircle, Loader2, Heart, Bookmark } from 'lucide-react'
 
-const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
+const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 const BASE = '/api'
 
 /**
@@ -14,7 +14,7 @@ const BASE = '/api'
  * @param {Object}   props.auth    - Auth state
  * @param {Function} props.resetCategory - Cache invalidation callback
  */
-export default function Player({ item, onBack, t, auth, resetCategory }) {
+export default function Player({ item, onBack, t, auth, resetCategory, onHistoryUpdate }) {
   const isTV  = item.mediaType === 'tv'
 
   // TV Selector State
@@ -28,8 +28,32 @@ export default function Player({ item, onBack, t, auth, resetCategory }) {
   // Auth Account States (Favorite / Watchlist)
   const [accountState, setAccountState] = useState({ favorite: false, watchlist: false })
   const [marking, setMarking] = useState(false)
+
+  // History tracking
+  const elapsedRef   = useRef(0)   // accumulated seconds
+  const intervalRef  = useRef(null)
+  const startTimeRef = useRef(Date.now())
   
   const dropdownRef = useRef(null)
+
+  // History: record entry on mount and tick every 30s
+  useEffect(() => {
+    if (!onHistoryUpdate) return
+    // Initial record
+    onHistoryUpdate(item, elapsedRef.current, activeSeason, activeEpisode)
+    // Tick
+    intervalRef.current = setInterval(() => {
+      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000)
+      elapsedRef.current = elapsed
+      onHistoryUpdate(item, elapsed, activeSeason, activeEpisode)
+    }, 30_000)
+    return () => {
+      clearInterval(intervalRef.current)
+      // Final save on unmount
+      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000)
+      onHistoryUpdate(item, elapsed, activeSeason, activeEpisode)
+    }
+  }, [item.id, activeSeason, activeEpisode])
 
   // Close dropdown on click outside
   useEffect(() => {

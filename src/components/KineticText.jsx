@@ -3,7 +3,7 @@ import { motion, useInView } from 'framer-motion'
 
 /* ─── Shared Variants ───────────────────────────────────────────────── */
 
-const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
+const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
 const charVariants = {
   hidden:  { y: '100%', opacity: 0 },

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Bell, X, ChevronDown, Globe, Palette, MapPin, Code } from 'lucide-react'
 
-const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
+const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
 /* ── Logo Animation ──────────────────────────────────────────────────── */
 function StrmLogo({ onClick }) {

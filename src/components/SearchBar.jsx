@@ -2,7 +2,7 @@ import React, { useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Loader2 } from 'lucide-react'
 
-const SPRING = { type: 'spring', damping: 20, stiffness: 100 }
+const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
 export default function SearchBar({ query, setQuery, loading, t }) {
   const inputRef = useRef(null)
