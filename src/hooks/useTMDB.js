@@ -30,7 +30,7 @@ export function normalise(item, forceCategory = null) {
 
     if (isAnimation && isJapanese) {
       category = 'anime'
-    } else if (isTV || genres.includes(18)) {
+    } else if (isTV) {
       const lang = item.original_language
       if (lang === 'ko')      category = 'kdrama'
       else if (lang === 'ja') category = 'jdrama'

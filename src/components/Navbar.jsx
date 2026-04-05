@@ -16,12 +16,12 @@ function StrmLogo({ onClick }) {
       <motion.span
         className="logo-text text-xl"
         style={{ fontWeight: 800, letterSpacing: '-0.04em', fontFamily: "'Inter', sans-serif" }}
-        data-text="strm"
+        data-text="strm."
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING, delay: 0.1 }}
       >
-        strm
+        strm.
       </motion.span>
     </button>
   )
@@ -310,14 +310,14 @@ export default function Navbar({
       <div className="flex-1 min-w-[20px]" />
 
       {/* Country Dropdown — desktop only */}
-      <div className="hidden md:block">
+      <div className="hidden md:block cursor-pointer">
         <Dropdown 
           id="country-selector"
           icon={MapPin} 
           label={t.country} 
           options={countries} 
           value={currentCountry} 
-          onChange={setCountry} 
+          onChange={setCountry}
         />
       </div>
 
@@ -338,7 +338,7 @@ export default function Navbar({
           icon={Palette} 
           options={themes} 
           value={currentTheme} 
-          onChange={setTheme} 
+          onChange={setTheme}
         />
 
         <AdultSwitch enabled={showAdult} onToggle={() => setShowAdult(v => !v)} />
