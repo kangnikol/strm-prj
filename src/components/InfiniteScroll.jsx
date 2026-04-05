@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react'
  * InfiniteScroll
  * A minimalist sentinel component that triggers onVisible when scrolled into view.
  */
-export default function InfiniteScroll({ onVisible, loading, hasMore = true }) {
+const InfiniteScroll = React.memo(({ onVisible, loading, hasMore = true }) => {
   const sentinelRef = useRef(null)
 
   useEffect(() => {
@@ -39,4 +39,6 @@ export default function InfiniteScroll({ onVisible, loading, hasMore = true }) {
       )}
     </div>
   )
-}
+})
+
+export default InfiniteScroll

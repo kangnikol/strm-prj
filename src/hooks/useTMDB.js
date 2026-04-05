@@ -16,7 +16,7 @@ function shuffle(array) {
 }
 
 /** Normalise a TMDB item so components always get the same shape */
-function normalise(item, forceCategory = null) {
+export function normalise(item, forceCategory = null) {
   const genres = item.genre_ids || []
   const origin = item.origin_country || []
   const isTV  = item.media_type === 'tv' || !!item.first_air_date
@@ -66,13 +66,13 @@ function normalise(item, forceCategory = null) {
   }
 }
 
-const CURRENT_YEAR = new Date().getFullYear()
-const isReleased = (item) => {
+export const CURRENT_YEAR = new Date().getFullYear()
+export const isReleased = (item) => {
   const y = parseInt(item.year, 10)
   return isNaN(y) || y <= CURRENT_YEAR
 }
 
-async function tmdbFetch(path, params = '') {
+export async function tmdbFetch(path, params = '') {
   const connector = path.includes('?') ? '&' : '?'
   const res = await fetch(`${BASE}${path}${connector}language=en-US${params}`)
   if (!res.ok) throw new Error(`TMDB ${res.status}`)

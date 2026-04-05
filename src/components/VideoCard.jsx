@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import React, { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Play, Star } from 'lucide-react'
 
@@ -13,7 +13,7 @@ const cardVariants = {
   }),
 }
 
-export default function VideoCard({ item, index = 0, featured = false, onClick, t }) {
+const VideoCard = React.memo(({ item, index = 0, featured = false, onClick, t }) => {
   const ref    = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-5% 0px' })
 
@@ -80,4 +80,6 @@ export default function VideoCard({ item, index = 0, featured = false, onClick, 
       </div>
     </motion.article>
   )
-}
+})
+
+export default VideoCard

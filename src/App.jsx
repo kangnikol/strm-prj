@@ -9,8 +9,10 @@ import KineticText from './components/KineticText'
 import Marquee     from './components/Marquee'
 import SectionRow   from './components/SectionRow'
 import InfiniteScroll from './components/InfiniteScroll'
-import { useTMDB } from './hooks/useTMDB'
-import { useAuth } from './hooks/useAuth'
+import SearchBar    from './components/SearchBar'
+import { useTMDB }  from './hooks/useTMDB'
+import { useSearch } from './hooks/useSearch'
+import { useAuth }  from './hooks/useAuth'
 import { translations } from './data/translations'
 import './index.css'
 
@@ -23,9 +25,12 @@ function Hero({ featured, onPlay, t }) {
   if (!featured) return null
 
   return (
-    <section
+    <motion.section
       id="hero"
-      className="relative w-full grid grid-cols-12 gap-4 min-h-[380px] mb-0 overflow-hidden"
+      className="relative w-full grid grid-cols-12 gap-4 mb-0 overflow-hidden"
+      initial={{ opacity: 0, height: 0, minHeight: 0 }}
+      animate={{ opacity: 1, height: 'auto', minHeight: 380, transition: { duration: 0.4 } }}
+      exit={{ opacity: 0, height: 0, minHeight: 0, transition: { duration: 0.3 } }}
     >
       <div className="col-span-12 lg:col-span-7 flex flex-col justify-end p-6 lg:p-10 z-10 relative">
         <motion.div
@@ -100,7 +105,7 @@ function Hero({ featured, onPlay, t }) {
         <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to right, var(--strm-bg) 0%, transparent 60%)' }} />
         <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to top, var(--strm-bg) 0%, transparent 50%)' }} />
       </div>
-    </section>
+    </motion.section>
   )
 }
 
@@ -119,8 +124,12 @@ export default function App() {
   const [category, setCategory] = useState('all')
   const [country, setCountry] = useState('all')
   const [activeItem, setActiveItem] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const t = translations[lang]
+
+  // Hook for explicit search decoupled from generic lists
+  const { results: searchResults, loading: searchLoading, hasMore: searchHasMore, fetchMoreSearch } = useSearch(searchQuery)
 
   useEffect(() => {
     localStorage.setItem('strm-lang', lang)
@@ -147,7 +156,7 @@ export default function App() {
     }
   }, [category, country, pagesMap])
 
-  // Global Navigation Listener: Auto-dismiss player when category or country changes
+  // Global Navigation Listener
   useEffect(() => {
     setActiveItem(null)
   }, [category, country])
@@ -162,7 +171,7 @@ export default function App() {
   const filteredPopular  = currentCategoryData.popular
 
   const isPersonalLibrary = category === 'favorites' || category === 'watchlist'
-  const showHero = !isPersonalLibrary && filteredLibrary.length > 0
+  const showHero = !isPersonalLibrary && !searchQuery && filteredLibrary.length > 0
   
   const featured = showHero ? filteredLibrary[0] : null
   const gridItems = showHero ? filteredLibrary.slice(1) : filteredLibrary
@@ -188,7 +197,6 @@ export default function App() {
         auth={auth}
         clearActiveItem={() => setActiveItem(null)}
       />
-
 
       <div className="flex flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
@@ -218,16 +226,25 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  {showHero && <Hero featured={featured} onPlay={setActiveItem} t={t} />}
+                  <AnimatePresence initial={false}>
+                    {showHero && <Hero key="hero" featured={featured} onPlay={setActiveItem} t={t} />}
+                  </AnimatePresence>
 
-                  {/* Marquee specifically for Home/All tab */}
-                  {category === 'all' && (
-                    <div className="border-y border-ctp-surface py-2.5 my-8 overflow-hidden">
-                      <Marquee text={`${t.trending} on strm`} separator=" — " speed={55} />
-                    </div>
+                  {/* Inline Search Bar inserted below Hero */}
+                  {!isPersonalLibrary && (
+                    <SearchBar query={searchQuery} setQuery={setSearchQuery} loading={searchLoading} t={t} />
                   )}
 
-                  <section className="py-10 pb-24 px-10">
+                  {!searchQuery ? (
+                    <>
+                      {/* Marquee specifically for Home/All tab */}
+                      {category === 'all' && (
+                        <div className="border-y border-ctp-surface py-2.5 my-8 overflow-hidden">
+                          <Marquee text={`${t.trending} on strm`} separator=" — " speed={55} />
+                        </div>
+                      )}
+
+                      <section className="py-10 pb-24 px-10">
                     {/* Featured Rows */}
                     <div className="flex flex-col gap-2 mb-16">
                       <SectionRow title={`Top Rated ${category === 'all' ? 'Titles' : t[category] || category}`} items={filteredTop} onPlay={setActiveItem} t={t} />
@@ -240,7 +257,9 @@ export default function App() {
                     {!isPersonalLibrary ? (
                       <div>
                         <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
-                          <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">Full Library</h3>
+                          <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">
+                            Full Library
+                          </h3>
                           <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{filteredLibrary.length} {t.titles}</span>
                         </div>
 
@@ -289,8 +308,38 @@ export default function App() {
                     />
                   )}
                 </>
+              ) : (
+                <section className="py-2 pb-24 px-10">
+                  <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
+                    <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-accent">
+                      Results for "{searchQuery}"
+                    </h3>
+                  </div>
+
+                  {searchResults.length === 0 && !searchLoading ? (
+                    <div className="flex flex-col items-center justify-center p-12 text-ctp-overlay">
+                      <span className="text-[10px] tracking-widest uppercase font-bold">No results found</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
+                      {searchResults.map((item, i) => (
+                        <div key={`${item.id}-${i}`} className="col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2">
+                          <VideoCard item={item} index={i} featured={false} onClick={setActiveItem} t={t} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <InfiniteScroll 
+                    onVisible={fetchMoreSearch} 
+                    loading={searchLoading} 
+                    hasMore={searchHasMore} 
+                  />
+                </section>
               )}
-            </motion.main>
+            </>
+          )}
+        </motion.main>
           )}
         </AnimatePresence>
       </div>

@@ -12,7 +12,7 @@ import KineticText from './KineticText'
  * @param {Function} onPlay  - Click handler
  * @param {Object}   t       - Translation dictionary
  */
-export default function SectionRow({ title, items, onPlay, t }) {
+const SectionRow = React.memo(({ title, items, onPlay, t }) => {
   if (!items || items.length === 0) return null
 
   // Restrict to max 10 items as requested
@@ -56,4 +56,6 @@ export default function SectionRow({ title, items, onPlay, t }) {
       </div>
     </section>
   )
-}
+})
+
+export default SectionRow

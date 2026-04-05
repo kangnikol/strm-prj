@@ -110,22 +110,6 @@ export default function Navbar({
   auth,
   clearActiveItem
 }) {
-  const [query, setQuery] = useState('')
-  const [focused, setFocused] = useState(false)
-  const inputRef = useRef(null)
-
-  // Ctrl+K / Cmd+K shortcut
-  useEffect(() => {
-    const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault()
-        inputRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
-
   const categories = [
     { label: t.movie, value: 'movie' },
     { label: t.series, value: 'series' },
@@ -211,29 +195,6 @@ export default function Navbar({
         value={currentCountry} 
         onChange={setCountry} 
       />
-
-      {/* Search */}
-      <motion.div
-        className={`search-field relative flex items-center gap-2 px-3 h-8 transition-all duration-300 hidden md:flex ${
-          focused ? 'w-48' : 'w-32'
-        }`}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ ...SPRING, delay: 0.2 }}
-      >
-        <Search size={12} strokeWidth={1.5} className={focused ? 'text-ctp-accent' : 'text-ctp-overlay1'} />
-        <input
-          ref={inputRef}
-          id="search-input"
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder={t.search}
-          className="flex-1 min-w-0 bg-transparent text-[10px] font-bold tracking-widest uppercase text-ctp-text placeholder:text-ctp-overlay0 focus:outline-none"
-        />
-      </motion.div>
 
       {/* Action Selectors (Theme/Lang) */}
       <div className="flex items-center gap-0.5 flex-shrink-0">
