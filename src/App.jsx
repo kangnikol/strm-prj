@@ -120,19 +120,20 @@ function Hero({ featured, onPlay, t }) {
    ═══════════════════════════════════════════════════════════════════════ */
 export default function App() {
   const auth = useAuth()
-  const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth)
-  const { history, addOrUpdate: addHistory, updateProgress: updateHistoryProgress, removeEntry: removeHistory } = useHistory()
-  
-  // Settings with Persistence
+
+  // Settings with Persistence — declared early so useTMDB can consume showAdult
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem('strm-lang')
     if (saved) return saved
-    // Auto-detect from device locale
     const deviceLang = navigator.language?.slice(0, 2).toLowerCase()
     const supported = ['en', 'id', 'jp', 'kr', 'es']
     return supported.includes(deviceLang) ? deviceLang : 'en'
   })
   const [theme, setTheme] = useState(() => localStorage.getItem('strm-theme') || 'mocha')
+  const [showAdult, setShowAdult] = useState(() => localStorage.getItem('strm-adult') === 'true')
+
+  const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth, showAdult)
+  const { history, addOrUpdate: addHistory, updateProgress: updateHistoryProgress, removeEntry: removeHistory } = useHistory()
   
   // UI State
   const [category, setCategory] = useState('all')
@@ -154,6 +155,13 @@ export default function App() {
     localStorage.setItem('strm-theme', theme)
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem('strm-adult', showAdult)
+    // Reset all categories so content reloads with the new adult filter
+    const allCategories = ['all', 'anime', 'kdrama', 'jdrama', 'cdrama', 'movie', 'series']
+    allCategories.forEach(cat => resetCategory(cat))
+  }, [showAdult])
 
   // Trigger Full Cache Reset on Country Change
   useEffect(() => {
@@ -209,6 +217,7 @@ export default function App() {
         currentTheme={theme} setTheme={setTheme}
         currentCategory={category} setCategory={setCategory}
         currentCountry={country} setCountry={setCountry}
+        showAdult={showAdult} setShowAdult={setShowAdult}
         auth={auth}
         clearActiveItem={() => setActiveItem(null)}
         onOpenLogin={() => setIsLoginOpen(true)}

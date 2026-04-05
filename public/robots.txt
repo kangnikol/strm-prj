@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Block API routes from crawlers
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://strm-prj.vercel.app/sitemap.xml

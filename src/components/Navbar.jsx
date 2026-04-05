@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Bell, X, ChevronDown, Globe, Palette, MapPin, Code } from 'lucide-react'
+import { Search, Bell, X, ChevronDown, Globe, Palette, MapPin, Code, ShieldOff, Shield } from 'lucide-react'
 
 const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
@@ -88,7 +88,39 @@ function NavDropdown({ label, options, value, onChange }) {
   )
 }
 
-/* ── Dropdown Component ──────────────────────────────────────────────── */
+/* ── Adult Content Toggle ────────────────────────────────────────────── */
+function AdultSwitch({ enabled, onToggle }) {
+  return (
+    <motion.button
+      id="adult-filter-toggle"
+      onClick={onToggle}
+      title={enabled ? 'Adult content ON — click to disable' : 'Adult content OFF — click to enable'}
+      className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-colors duration-200"
+      style={{ color: enabled ? 'var(--strm-pink, #f38ba8)' : 'var(--strm-overlay1)' }}
+      whileTap={{ scale: 0.9 }}
+    >
+      {/* Track */}
+      <div
+        className="relative w-7 h-4 rounded-full transition-colors duration-300 flex-shrink-0"
+        style={{
+          background: enabled
+            ? 'linear-gradient(135deg, #f38ba8, #ea76cb)'
+            : 'var(--strm-surface1)',
+          boxShadow: enabled ? '0 0 8px rgba(243,139,168,0.5)' : 'none',
+        }}
+      >
+        <motion.div
+          className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow"
+          animate={{ left: enabled ? '14px' : '2px' }}
+          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+        />
+      </div>
+      <span className="hidden lg:inline">18+</span>
+    </motion.button>
+  )
+}
+
+
 function Dropdown({ icon: Icon, avatar, label, options, value, onChange, id, forceLabel = false }) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
@@ -168,6 +200,7 @@ export default function Navbar({
   currentTheme, setTheme,
   currentCategory, setCategory,
   currentCountry, setCountry,
+  showAdult, setShowAdult,
   auth,
   clearActiveItem,
   onOpenLogin
@@ -307,6 +340,8 @@ export default function Navbar({
           value={currentTheme} 
           onChange={setTheme} 
         />
+
+        <AdultSwitch enabled={showAdult} onToggle={() => setShowAdult(v => !v)} />
 
         <div className="w-px h-5 bg-ctp-surface mx-1" />
 

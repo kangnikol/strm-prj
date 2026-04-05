@@ -2,12 +2,82 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>strm — Watch Without Limits</title>
-    <meta name="description" content="strm is an ultra-minimalist video streaming platform. Fast, clean, and distraction-free." />
+
+    <!-- ═══════════════════════════════════════════
+         Primary SEO
+    ═══════════════════════════════════════════ -->
+    <title>strm.</title>
+    <meta name="description" content="strm is a free, ultra-minimalist streaming platform. Discover trending movies, series, anime, K-Drama, J-Drama, and C-Drama — all in one beautifully designed place." />
+    <meta name="keywords" content="streaming, watch movies online, watch series online, anime streaming, kdrama, jdrama, cdrama, free movies, free series, strm" />
+    <meta name="author" content="strm" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://strm-prj.vercel.app/" />
+
+    <!-- ═══════════════════════════════════════════
+         Open Graph (Facebook, WhatsApp, Discord, etc.)
+    ═══════════════════════════════════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="strm" />
+    <meta property="og:title" content="strm." />
+    <meta property="og:description" content="Discover trending movies, series, anime, K-Drama, J-Drama, and C-Drama — all in one beautifully designed, distraction-free platform." />
+    <meta property="og:url" content="https://strm-prj.vercel.app/" />
+    <meta property="og:image" content="https://strm-prj.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="strm — Watch Without Limits" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ═══════════════════════════════════════════
+         Twitter / X Card
+    ═══════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="strm." />
+    <meta name="twitter:description" content="Discover trending movies, series, anime, K-Drama, J-Drama, and C-Drama — free, fast, and beautifully minimal." />
+    <meta name="twitter:image" content="https://strm-prj.vercel.app/og-image.png" />
+    <meta name="twitter:image:alt" content="strm — Watch Without Limits" />
+
+    <!-- ═══════════════════════════════════════════
+         App / PWA Meta
+    ═══════════════════════════════════════════ -->
+    <meta name="theme-color" content="#1e1e2e" />
+    <meta name="application-name" content="strm" />
+    <meta name="apple-mobile-web-app-title" content="strm" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- ═══════════════════════════════════════════
+         Structured Data — JSON-LD (WebSite + SearchAction)
+    ═══════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "strm",
+      "alternateName": "strm streaming",
+      "url": "https://strm-prj.vercel.app/",
+      "description": "Free minimalist streaming platform for movies, series, anime, K-Drama, J-Drama, and C-Drama.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://strm-prj.vercel.app/?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- ═══════════════════════════════════════════
+         Performance — Resource Hints
+    ═══════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://image.tmdb.org" />
+    <link rel="dns-prefetch" href="https://api.themoviedb.org" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>

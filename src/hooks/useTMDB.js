@@ -63,8 +63,12 @@ export function normalise(item, forceCategory = null) {
     year:         getYear(item),
     category,
     country,
+    adult:        item.adult || false,
   }
 }
+
+/** Filter out adult-flagged items */
+export const isNotAdult = (item) => !item.adult
 
 export const CURRENT_YEAR = new Date().getFullYear()
 export const isReleased = (item) => {
@@ -72,9 +76,10 @@ export const isReleased = (item) => {
   return isNaN(y) || y <= CURRENT_YEAR
 }
 
-export async function tmdbFetch(path, params = '') {
+export async function tmdbFetch(path, params = '', showAdult = false) {
   const connector = path.includes('?') ? '&' : '?'
-  const res = await fetch(`${BASE}${path}${connector}language=en-US${params}`)
+  const adultParam = showAdult ? '&include_adult=true' : '&include_adult=false'
+  const res = await fetch(`${BASE}${path}${connector}language=en-US${adultParam}${params}`)
   if (!res.ok) throw new Error(`TMDB ${res.status}`)
   return res.json()
 }
@@ -84,7 +89,7 @@ export async function tmdbFetch(path, params = '') {
  * Dynamically fetches content from TMDB with Infinite Scroll support.
  * Manages paginated state for each category independently, including editorial sections.
  */
-export function useTMDB(auth) {
+export function useTMDB(auth, showAdult = false) {
   const initialState = { library: [], top: [], trending: [], recent: [], popular: [] }
   const [itemsMap, setItemsMap] = useState({
     all:    { ...initialState },
@@ -109,7 +114,7 @@ export function useTMDB(auth) {
     setPagesMap(prev => ({ ...prev, [cat]: 0 }))
   }
 
-  const fetchMore = async (cat = 'all', countryCode = 'all') => {
+  const fetchMore = async (cat = 'all', countryCode = 'all', _showAdult = showAdult) => {
     if (loading) return
     
     // Limit to 100 items per category as requested to prevent infinite loading
@@ -143,13 +148,14 @@ export function useTMDB(auth) {
         const authParams = `&session_id=${auth.sessionId}`
         
         const [m, t] = await Promise.all([
-          tmdbFetch(mPath, `&sort_by=created_at.desc&page=${nextPage}${authParams}`),
-          tmdbFetch(tPath, `&sort_by=created_at.desc&page=${nextPage}${authParams}`)
+          tmdbFetch(mPath, `&sort_by=created_at.desc&page=${nextPage}${authParams}`, _showAdult),
+          tmdbFetch(tPath, `&sort_by=created_at.desc&page=${nextPage}${authParams}`, _showAdult)
         ])
         
         results.library = shuffle([...(m.results || []), ...(t.results || [])])
           .map(i => normalise(i))
           .filter(isReleased)
+          .filter((item) => _showAdult || !item.adult)
         
         // Skip discovery parallel fetch
       } else {
@@ -168,27 +174,30 @@ export function useTMDB(auth) {
           // Build the query endpoints. 
           // For 'all' category, filters will just be empty string, performing global discoveries.
           const [libM, libT, topM, topT, recM, recT, popM, popT, trendAll] = await Promise.all([
-            tmdbFetch('/discover/movie', `${filters}&sort_by=popularity.desc&page=1${countryParam}`),
-            tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=1${countryParam}`),
-            tmdbFetch('/discover/movie', `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`),
-            tmdbFetch('/discover/tv',    `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`),
-            tmdbFetch('/discover/movie', `${filters}&sort_by=primary_release_date.desc&page=1${countryParam}`),
-            tmdbFetch('/discover/tv',    `${filters}&sort_by=first_air_date.desc&page=1${countryParam}`),
-            tmdbFetch('/discover/movie', `${filters}&sort_by=revenue.desc&page=1${countryParam}`),
-            tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=2${countryParam}`),
-            tmdbFetch('/trending/all/week', `&page=1`) // Trending is always global for diversity
+            tmdbFetch('/discover/movie', `${filters}&sort_by=popularity.desc&page=1${countryParam}`, _showAdult),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=1${countryParam}`, _showAdult),
+            tmdbFetch('/discover/movie', `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`, _showAdult),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=vote_average.desc&vote_count.gte=50&page=1${countryParam}`, _showAdult),
+            tmdbFetch('/discover/movie', `${filters}&sort_by=primary_release_date.desc&page=1${countryParam}`, _showAdult),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=first_air_date.desc&page=1${countryParam}`, _showAdult),
+            tmdbFetch('/discover/movie', `${filters}&sort_by=revenue.desc&page=1${countryParam}`, _showAdult),
+            tmdbFetch('/discover/tv',    `${filters}&sort_by=popularity.desc&page=2${countryParam}`, _showAdult),
+            tmdbFetch('/trending/all/week', `&page=1`, _showAdult)
           ])
 
-          results.library  = shuffle([...(libM.results || []), ...(libT.results || [])]).map(i => normalise(i, force)).filter(isReleased)
-          results.top      = shuffle([...(topM.results || []), ...(topT.results || [])]).map(i => normalise(i, force)).filter(isReleased).slice(0, 10)
-          results.recent   = shuffle([...(recM.results || []), ...(recT.results || [])]).map(i => normalise(i, force)).filter(isReleased).slice(0, 10)
-          results.popular  = shuffle([...(popM.results || []), ...(popT.results || [])]).map(i => normalise(i, force)).filter(isReleased).slice(0, 10)
+          const adultFilter = (item) => _showAdult || !item.adult
+
+          results.library  = shuffle([...(libM.results || []), ...(libT.results || [])]).map(i => normalise(i, force)).filter(isReleased).filter(adultFilter)
+          results.top      = shuffle([...(topM.results || []), ...(topT.results || [])]).map(i => normalise(i, force)).filter(isReleased).filter(adultFilter).slice(0, 10)
+          results.recent   = shuffle([...(recM.results || []), ...(recT.results || [])]).map(i => normalise(i, force)).filter(isReleased).filter(adultFilter).slice(0, 10)
+          results.popular  = shuffle([...(popM.results || []), ...(popT.results || [])]).map(i => normalise(i, force)).filter(isReleased).filter(adultFilter).slice(0, 10)
           
           // Local filter for trending row (ensures relevant content for the tab)
           const targetLangs = cat === 'cdrama' ? ['zh', 'cn'] : [cat === 'kdrama' ? 'ko' : 'ja']
           results.trending = (trendAll.results || [])
             .map(i => normalise(i))
             .filter(isReleased)
+            .filter(adultFilter)
             .filter(i => {
               if (cat === 'all') return true
               if (cat === 'anime') return i.category === 'anime'
@@ -199,12 +208,13 @@ export function useTMDB(auth) {
         } else {
           // Just fetch more for library
           const [m, t] = await Promise.all([
-            tmdbFetch('/discover/movie', `${filters}${baseParams}`),
-            tmdbFetch('/discover/tv',    `${filters}${baseParams}`)
+            tmdbFetch('/discover/movie', `${filters}${baseParams}`, _showAdult),
+            tmdbFetch('/discover/tv',    `${filters}${baseParams}`, _showAdult)
           ])
           results.library = shuffle([...(m.results || []), ...(t.results || [])])
             .map(i => normalise(i, force))
             .filter(isReleased)
+            .filter((item) => _showAdult || !item.adult)
         }
       }
 
