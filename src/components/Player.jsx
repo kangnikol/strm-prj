@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Star, ChevronDown, PlayCircle, Loader2, Heart, Bookmark } from 'lucide-react'
+import { ArrowLeft, Star, ChevronDown, PlayCircle, Loader2, Heart, Bookmark, Maximize2 } from 'lucide-react'
 
 const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 const BASE = '/api'
@@ -34,7 +34,19 @@ export default function Player({ item, onBack, t, auth, resetCategory, onHistory
   const intervalRef  = useRef(null)
   const startTimeRef = useRef(Date.now())
   
-  const dropdownRef = useRef(null)
+  const dropdownRef  = useRef(null)
+  const iframeRef    = useRef(null)
+
+  // Fullscreen handler — needed on mobile because subtitle panel covers video
+  const handleFullscreen = () => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+    const req = iframe.requestFullscreen
+      || iframe.webkitRequestFullscreen
+      || iframe.mozRequestFullScreen
+      || iframe.msRequestFullscreen
+    if (req) req.call(iframe)
+  }
 
   // History: record entry on mount and tick every 30s
   useEffect(() => {
@@ -199,12 +211,13 @@ export default function Player({ item, onBack, t, auth, resetCategory, onHistory
 
         {/* Player Iframe — sticky on mobile, flex on desktop */}
         <motion.div
-          className="sticky top-0 z-30 w-full aspect-video md:aspect-auto md:static md:flex-1 bg-ctp-crust relative"
+          className="sticky top-0 z-30 w-full aspect-[16/10] md:aspect-auto md:static md:flex-1 bg-ctp-crust relative"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           <iframe
+            ref={iframeRef}
             id="vidking-player"
             src={vidkingUrl}
             title={item.title}
@@ -213,6 +226,16 @@ export default function Player({ item, onBack, t, auth, resetCategory, onHistory
             className="w-full h-full border-0"
             style={{ background: '#11111b' }}
           />
+
+          {/* Fullscreen button — mobile only, solves subtitle panel overlap issue */}
+          <button
+            onClick={handleFullscreen}
+            title="Fullscreen (recommended before opening subtitles)"
+            className="md:hidden absolute bottom-2 right-2 z-40 flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold tracking-widest uppercase border border-white/10 active:scale-95 transition-transform"
+          >
+            <Maximize2 size={11} strokeWidth={2} />
+            <span>Fullscreen</span>
+          </button>
         </motion.div>
 
         {/* ── Metadata Panel ─────────────────────────────────────────── */}
