@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Loader2 } from 'lucide-react'
+import { Routes, Route, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom'
 
 import Navbar      from './components/Navbar'
 import VideoCard   from './components/VideoCard'
@@ -12,7 +13,7 @@ import InfiniteScroll from './components/InfiniteScroll'
 import SearchBar       from './components/SearchBar'
 import LoginModal      from './components/LoginModal'
 import ContinueWatching from './components/ContinueWatching'
-import { useTMDB }     from './hooks/useTMDB'
+import { useTMDB, fetchSingleItem } from './hooks/useTMDB'
 import { useSearch }   from './hooks/useSearch'
 import { useAuth }     from './hooks/useAuth'
 import { useHistory }  from './hooks/useHistory'
@@ -116,12 +117,239 @@ function Hero({ featured, onPlay, t }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   App
+   Home View Component (Categories + Search)
+   ═══════════════════════════════════════════════════════════════════════ */
+function MainContent({ 
+  category, country, t, loading, fetchMore, itemsMap, pagesMap, usingMock,
+  searchQuery, setSearchQuery, searchResults, searchLoading, searchHasMore, fetchMoreSearch,
+  history, removeHistory, auth
+}) {
+  const navigate = useNavigate()
+  
+  const currentCategoryData = itemsMap[category] || { library: [], top: [], trending: [], recent: [], popular: [] }
+  const { library: filteredLibrary, top: filteredTop, trending: filteredTrending, recent: filteredRecent, popular: filteredPopular } = currentCategoryData
+
+  const isPersonalLibrary = category === 'favorites' || category === 'watchlist'
+  const showHero = !isPersonalLibrary && !searchQuery && filteredLibrary.length > 0
+  
+  const featured = showHero ? filteredLibrary[0] : null
+  const gridItems = showHero ? filteredLibrary.slice(1) : filteredLibrary
+
+  const groupedPersonalItems = useMemo(() => {
+    if (!isPersonalLibrary) return {}
+    const groups = {}
+    gridItems.forEach(item => {
+      if (!groups[item.category]) groups[item.category] = []
+      groups[item.category].push(item)
+    })
+    return groups
+  }, [isPersonalLibrary, gridItems])
+
+  const handlePlay = (item) => navigate(`/watch/${item.mediaType}/${item.id}`, { state: { item } })
+
+  return (
+    <motion.main
+      key="home"
+      id="main-content"
+      className="flex-1 overflow-y-auto no-scrollbar"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+    >
+      {loading && filteredLibrary.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full gap-3 text-ctp-overlay py-32">
+          <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-ctp-accent" />
+          <p className="text-[10px] tracking-widest uppercase font-bold">{t.loading}</p>
+        </div>
+      ) : (
+        <>
+          <AnimatePresence initial={false}>
+            {showHero && <Hero key="hero" featured={featured} onPlay={handlePlay} t={t} />}
+          </AnimatePresence>
+
+          {!isPersonalLibrary && (
+            <SearchBar query={searchQuery} setQuery={setSearchQuery} loading={searchLoading} t={t} />
+          )}
+
+          {!searchQuery ? (
+            <>
+              {category === 'all' && (
+                <div className="border-y border-ctp-surface py-2.5 my-8 overflow-hidden">
+                  <Marquee text={`${t.trending} on strm`} separator=" — " speed={55} />
+                </div>
+              )}
+
+              <section className="py-10 pb-24 px-10">
+                {category === 'all' && (
+                  <ContinueWatching
+                    history={history}
+                    onPlay={handlePlay}
+                    onRemove={removeHistory}
+                    t={t}
+                  />
+                )}
+
+                <div className="flex flex-col gap-2 mb-16">
+                  <SectionRow title={`Top Rated ${category === 'all' ? 'Titles' : t[category] || category}`} items={filteredTop} onPlay={handlePlay} t={t} />
+                  <SectionRow title={`Trending Right Now`} items={filteredTrending} onPlay={handlePlay} t={t} />
+                  <SectionRow title={`Recently Added`} items={filteredRecent} onPlay={handlePlay} t={t} />
+                  <SectionRow title={`Popular Picks`} items={filteredPopular} onPlay={handlePlay} t={t} />
+                </div>
+
+                {!isPersonalLibrary ? (
+                  <div>
+                    <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
+                      <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">Discover</h3>
+                      <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{filteredLibrary.length} {t.titles}</span>
+                    </div>
+                    <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-1 md:px-6">
+                      {gridItems.map((item, i) => {
+                        const isLarge = category === 'all' && i < 2
+                        return (
+                          <div key={`${item.id}-${i}`} className={isLarge ? "col-span-12 lg:col-span-6" : "col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2"}>
+                            <VideoCard item={item} index={i} featured={isLarge} onClick={handlePlay} t={t} />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-16">
+                    {Object.keys(groupedPersonalItems).length === 0 && !loading && (
+                      <div className="flex flex-col items-center justify-center p-12 text-ctp-overlay">
+                        <span className="text-[10px] tracking-widest uppercase font-bold">Looks empty here!</span>
+                      </div>
+                    )}
+                    {Object.entries(groupedPersonalItems).map(([catKey, items]) => (
+                      <div key={catKey}>
+                        <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
+                          <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-text">{t[catKey] || catKey}</h3>
+                          <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{items.length} {t.titles}</span>
+                        </div>
+                        <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
+                          {items.map((item, i) => (
+                            <div key={`${item.id}-${i}`} className="col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2">
+                              <VideoCard item={item} index={i} featured={false} onClick={handlePlay} t={t} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {!isPersonalLibrary && (
+                <InfiniteScroll 
+                  onVisible={() => fetchMore(category, country)} 
+                  loading={loading} 
+                  hasMore={!usingMock && filteredLibrary.length < 100} 
+                />
+              )}
+            </>
+          ) : (
+            <section className="py-2 pb-24 px-10">
+              <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
+                <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-accent">Results for "{searchQuery}"</h3>
+              </div>
+              {searchResults.length === 0 && !searchLoading ? (
+                <div className="flex flex-col items-center justify-center p-12 text-ctp-overlay">
+                  <span className="text-[10px] tracking-widest uppercase font-bold">No results found</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
+                  {searchResults.map((item, i) => (
+                    <div key={`${item.id}-${i}`} className="col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2">
+                      <VideoCard item={item} index={i} featured={false} onClick={handlePlay} t={t} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <InfiniteScroll onVisible={fetchMoreSearch} loading={searchLoading} hasMore={searchHasMore} />
+            </section>
+          )}
+        </>
+      )}
+    </motion.main>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Watch Page Wrapper (Handles Direct Linking)
+   ═══════════════════════════════════════════════════════════════════════ */
+function WatchPage({ t, auth, resetCategory, addHistory }) {
+  const { mediaType, id } = useParams()
+  const { state } = useLocation()
+  const navigate = useNavigate()
+  const [item, setItem] = useState(state?.item || null)
+  const [loading, setLoading] = useState(!item)
+
+  useEffect(() => {
+    if (!item && id && mediaType) {
+      setLoading(true)
+      fetchSingleItem(id, mediaType)
+        .then(data => {
+          if (data) setItem(data)
+          else navigate('/')
+        })
+        .finally(() => setLoading(false))
+    }
+  }, [id, mediaType, item])
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-full gap-3 text-ctp-overlay bg-ctp-crust">
+      <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-ctp-accent" />
+      <p className="text-[10px] tracking-widest uppercase font-bold">{t.loading}</p>
+    </div>
+  )
+  if (!item) return null
+
+  return (
+    <Player
+      key="player"
+      item={item}
+      onBack={() => navigate(-1)}
+      t={t}
+      auth={auth}
+      resetCategory={resetCategory}
+      onHistoryUpdate={(item, elapsed, season, episode) => {
+        addHistory(item, { elapsedSeconds: elapsed, season, episode })
+      }}
+    />
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   App Main Shell
    ═══════════════════════════════════════════════════════════════════════ */
 export default function App() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const auth = useAuth()
 
-  // Settings with Persistence — declared early so useTMDB can consume showAdult
+  // Derive Category from Pathname
+  const category = useMemo(() => {
+    if (pathname === '/') return 'all'
+    if (pathname === '/favorites') return 'favorites'
+    if (pathname === '/watchlist') return 'watchlist'
+    if (pathname.startsWith('/category/')) return pathname.split('/category/')[1] || 'all'
+    return 'all'
+  }, [pathname])
+
+  const searchQuery = searchParams.get('q') || ''
+  const setSearchQuery = (q) => {
+    if (!q) {
+      searchParams.delete('q')
+      navigate('/')
+    } else {
+      setSearchParams({ q })
+      if (pathname !== '/search') navigate('/search?q=' + q)
+    }
+  }
+
+  // Settings with Persistence
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem('strm-lang')
     if (saved) return saved
@@ -131,95 +359,44 @@ export default function App() {
   })
   const [theme, setTheme] = useState(() => localStorage.getItem('strm-theme') || 'mocha')
   const [showAdult, setShowAdult] = useState(() => localStorage.getItem('strm-adult') === 'true')
-
-  const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth, showAdult)
-  const { history, addOrUpdate: addHistory, updateProgress: updateHistoryProgress, removeEntry: removeHistory } = useHistory()
-  
-  // UI State
-  const [category, setCategory] = useState('all')
   const [country, setCountry] = useState('all')
-  const [activeItem, setActiveItem] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
   const [isLoginOpen, setIsLoginOpen] = useState(false)
 
+  const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth, showAdult)
+  const { history, addOrUpdate: addHistory, removeEntry: removeHistory } = useHistory()
+  const { results: searchResults, loading: searchLoading, hasMore: searchHasMore, fetchMoreSearch } = useSearch(searchQuery)
   const t = translations[lang]
 
-  // Hook for explicit search decoupled from generic lists
-  const { results: searchResults, loading: searchLoading, hasMore: searchHasMore, fetchMoreSearch } = useSearch(searchQuery)
-
-  useEffect(() => {
-    localStorage.setItem('strm-lang', lang)
-  }, [lang])
-
+  useEffect(() => { localStorage.setItem('strm-lang', lang) }, [lang])
   useEffect(() => {
     localStorage.setItem('strm-theme', theme)
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
-
   useEffect(() => {
     localStorage.setItem('strm-adult', showAdult)
-    // Reset all categories so content reloads with the new adult filter
     const allCategories = ['all', 'anime', 'kdrama', 'jdrama', 'cdrama', 'movie', 'series']
     allCategories.forEach(cat => resetCategory(cat))
   }, [showAdult])
 
-  // Trigger Full Cache Reset on Country Change
   useEffect(() => {
-    // We intentionally DO NOT call fetchMore synchronously here.
-    // By resetting the cache, the pagesMap drops to 0, which then cleanly triggers 
-    // the Initial Load effect on the next render cycle with perfectly synced closures.
     const allCategories = ['all', 'anime', 'kdrama', 'jdrama', 'cdrama', 'movie', 'series']
     allCategories.forEach(cat => resetCategory(cat))
   }, [country])
 
-  // Initial Load Trigger for Categories (Listens for pages dropping to 0)
   useEffect(() => {
-    if (category && pagesMap[category] === 0) {
-      fetchMore(category, country)
-    }
+    if (category && pagesMap[category] === 0) fetchMore(category, country)
   }, [category, country, pagesMap])
-
-  // Global Navigation Listener
-  useEffect(() => {
-    setActiveItem(null)
-  }, [category, country])
-
-  // Data mapping (API now handles regional filtering)
-  const currentCategoryData = itemsMap[category] || { library: [], top: [], trending: [], recent: [], popular: [] }
-  
-  const filteredLibrary  = currentCategoryData.library
-  const filteredTop      = currentCategoryData.top
-  const filteredTrending = currentCategoryData.trending
-  const filteredRecent   = currentCategoryData.recent
-  const filteredPopular  = currentCategoryData.popular
-
-  const isPersonalLibrary = category === 'favorites' || category === 'watchlist'
-  const showHero = !isPersonalLibrary && !searchQuery && filteredLibrary.length > 0
-  
-  const featured = showHero ? filteredLibrary[0] : null
-  const gridItems = showHero ? filteredLibrary.slice(1) : filteredLibrary
-
-  // Pre-calculate grouped sections if we are inside personal lists
-  const groupedPersonalItems = {}
-  if (isPersonalLibrary) {
-    gridItems.forEach(item => {
-      if (!groupedPersonalItems[item.category]) groupedPersonalItems[item.category] = []
-      groupedPersonalItems[item.category].push(item)
-    })
-  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-ctp-base text-ctp-text">
-      
       <Navbar 
         t={t}
         currentLang={lang} setLang={setLang}
         currentTheme={theme} setTheme={setTheme}
-        currentCategory={category} setCategory={setCategory}
+        currentCategory={category} setCategory={(val) => navigate(val === 'all' ? '/' : `/category/${val}`)}
         currentCountry={country} setCountry={setCountry}
         showAdult={showAdult} setShowAdult={setShowAdult}
         auth={auth}
-        clearActiveItem={() => setActiveItem(null)}
         onOpenLogin={() => setIsLoginOpen(true)}
       />
 
@@ -231,160 +408,44 @@ export default function App() {
 
       <div className="flex flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
-          {activeItem ? (
-            <Player
-              key="player"
-              item={activeItem}
-              onBack={() => setActiveItem(null)}
-              t={t}
-              auth={auth}
-              resetCategory={resetCategory}
-              onHistoryUpdate={(item, elapsed, season, episode) => {
-                addHistory(item, { elapsedSeconds: elapsed, season, episode })
-              }}
-            />
-          ) : (
-            <motion.main
-              key="home"
-              id="main-content"
-              className="flex-1 overflow-y-auto no-scrollbar"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              {loading && filteredLibrary.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-ctp-overlay py-32">
-                  <Loader2 size={24} strokeWidth={1.5} className="animate-spin text-ctp-accent" />
-                  <p className="text-[10px] tracking-widest uppercase font-bold">{t.loading}</p>
-                </div>
-              ) : (
-                <>
-                  <AnimatePresence initial={false}>
-                    {showHero && <Hero key="hero" featured={featured} onPlay={setActiveItem} t={t} />}
-                  </AnimatePresence>
-
-                  {/* Inline Search Bar inserted below Hero */}
-                  {!isPersonalLibrary && (
-                    <SearchBar query={searchQuery} setQuery={setSearchQuery} loading={searchLoading} t={t} />
-                  )}
-
-                  {!searchQuery ? (
-                    <>
-                      {/* Marquee specifically for Home/All tab */}
-                      {category === 'all' && (
-                        <div className="border-y border-ctp-surface py-2.5 my-8 overflow-hidden">
-                          <Marquee text={`${t.trending} on strm`} separator=" — " speed={55} />
-                        </div>
-                      )}
-
-                      <section className="py-10 pb-24 px-10">
-                    {/* Continue Watching — only on homepage, no search */}
-                      {!searchQuery && category === 'all' && (
-                        <ContinueWatching
-                          history={history}
-                          onPlay={(entry) => setActiveItem(entry)}
-                          onRemove={removeHistory}
-                          t={t}
-                        />
-                      )}
-
-                    {/* Featured Rows */}
-                    <div className="flex flex-col gap-2 mb-16">
-                      <SectionRow title={`Top Rated ${category === 'all' ? 'Titles' : t[category] || category}`} items={filteredTop} onPlay={setActiveItem} t={t} />
-                      <SectionRow title={`Trending Right Now`} items={filteredTrending} onPlay={setActiveItem} t={t} />
-                      <SectionRow title={`Recently Added`} items={filteredRecent} onPlay={setActiveItem} t={t} />
-                      <SectionRow title={`Popular Picks`} items={filteredPopular} onPlay={setActiveItem} t={t} />
-                    </div>
-
-                    {/* Main Library Display */}
-                    {!isPersonalLibrary ? (
-                      <div>
-                        <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
-                          <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">
-                            Discover
-                          </h3>
-                          <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{filteredLibrary.length} {t.titles}</span>
-                        </div>
-
-                        <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-1 md:px-6">
-                          {gridItems.map((item, i) => {
-                            const isLarge = category === 'all' && i < 2
-                            return (
-                              <div key={`${item.id}-${i}`} className={isLarge ? "col-span-12 lg:col-span-6" : "col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2"}>
-                                <VideoCard item={item} index={i} featured={isLarge} onClick={setActiveItem} t={t} />
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-16">
-                        {Object.keys(groupedPersonalItems).length === 0 && !loading && (
-                          <div className="flex flex-col items-center justify-center p-12 text-ctp-overlay">
-                            <span className="text-[10px] tracking-widest uppercase font-bold">Looks empty here!</span>
-                          </div>
-                        )}
-                        {Object.entries(groupedPersonalItems).map(([catKey, items]) => (
-                          <div key={catKey}>
-                            <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
-                              <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-text">{t[catKey] || catKey}</h3>
-                              <span className="text-[10px] font-bold tracking-widest uppercase text-ctp-overlay">{items.length} {t.titles}</span>
-                            </div>
-                            <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
-                              {items.map((item, i) => (
-                                <div key={`${item.id}-${i}`} className="col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2">
-                                  <VideoCard item={item} index={i} featured={false} onClick={setActiveItem} t={t} />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-
-                  {!isPersonalLibrary && (
-                    <InfiniteScroll 
-                      onVisible={() => fetchMore(category, country)} 
-                      loading={loading} 
-                      hasMore={!usingMock && filteredLibrary.length < 100} 
-                    />
-                  )}
-                </>
-              ) : (
-                <section className="py-2 pb-24 px-10">
-                  <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
-                    <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-accent">
-                      Results for "{searchQuery}"
-                    </h3>
-                  </div>
-
-                  {searchResults.length === 0 && !searchLoading ? (
-                    <div className="flex flex-col items-center justify-center p-12 text-ctp-overlay">
-                      <span className="text-[10px] tracking-widest uppercase font-bold">No results found</span>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
-                      {searchResults.map((item, i) => (
-                        <div key={`${item.id}-${i}`} className="col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2">
-                          <VideoCard item={item} index={i} featured={false} onClick={setActiveItem} t={t} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <InfiniteScroll 
-                    onVisible={fetchMoreSearch} 
-                    loading={searchLoading} 
-                    hasMore={searchHasMore} 
-                  />
-                </section>
-              )}
-            </>
-          )}
-        </motion.main>
-          )}
+          <Routes location={useLocation()} key={pathname}>
+            <Route path="/" element={
+              <MainContent 
+                category={category} country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                history={history} removeHistory={removeHistory} auth={auth}
+              />
+            } />
+            <Route path="/category/:cat" element={
+              <MainContent 
+                category={category} country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                history={history} removeHistory={removeHistory} auth={auth}
+              />
+            } />
+            <Route path="/search" element={
+              <MainContent 
+                category={category} country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                history={history} removeHistory={removeHistory} auth={auth}
+              />
+            } />
+            <Route path="/favorites" element={
+              <MainContent 
+                category="favorites" country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                history={history} removeHistory={removeHistory} auth={auth}
+              />
+            } />
+            <Route path="/watchlist" element={
+              <MainContent 
+                category="watchlist" country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                history={history} removeHistory={removeHistory} auth={auth}
+              />
+            } />
+            <Route path="/watch/:mediaType/:id" element={<WatchPage t={t} auth={auth} resetCategory={resetCategory} addHistory={addHistory} />} />
+          </Routes>
         </AnimatePresence>
       </div>
     </div>

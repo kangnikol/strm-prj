@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Play, Star } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
@@ -16,6 +17,14 @@ const cardVariants = {
 const VideoCard = React.memo(({ item, index = 0, featured = false, onClick, t }) => {
   const ref    = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-5% 0px' })
+  const navigate = useNavigate()
+
+  const handleNavigation = (e) => {
+    // Prevent default to avoid full page reload if caught by router
+    e.preventDefault()
+    if (onClick) onClick(item)
+    else navigate(`/watch/${item.mediaType}/${item.id}`, { state: { item } })
+  }
 
   return (
     <motion.article
@@ -26,7 +35,7 @@ const VideoCard = React.memo(({ item, index = 0, featured = false, onClick, t })
       variants={cardVariants}
       initial="hidden"
       animate={inView ? 'visible' : 'hidden'}
-      onClick={() => onClick?.(item)}
+      onClick={handleNavigation}
     >
       <div
         className={`thumb-grid w-full overflow-hidden ${
@@ -36,6 +45,7 @@ const VideoCard = React.memo(({ item, index = 0, featured = false, onClick, t })
         <img
           src={featured ? item.backdropUrl : item.posterUrl}
           alt={item.title}
+          className="w-full h-full object-cover"
           loading="lazy"
         />
 

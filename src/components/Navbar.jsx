@@ -202,7 +202,6 @@ export default function Navbar({
   currentCountry, setCountry,
   showAdult, setShowAdult,
   auth,
-  clearActiveItem,
   onOpenLogin
 }) {
   const categories = [
@@ -249,7 +248,7 @@ export default function Navbar({
       transition={{ ...SPRING, delay: 0.05 }}
     >
       {/* Logo */}
-      <StrmLogo onClick={() => { setCategory('all'); if(clearActiveItem) clearActiveItem(); }} />
+      <StrmLogo onClick={() => setCategory('all')} />
 
       <div className="w-px h-5 bg-ctp-surface flex-shrink-0 mx-1" />
 
@@ -260,10 +259,7 @@ export default function Navbar({
           label={categories.find(c => c.value === currentCategory)?.label || t.discover || 'Category'}
           options={categories}
           value={currentCategory}
-          onChange={(val) => {
-            setCategory(val);
-            if (clearActiveItem) clearActiveItem();
-          }}
+          onChange={(val) => setCategory(val)}
           forceLabel={true}
         />
       </div>
@@ -277,7 +273,7 @@ export default function Navbar({
             <motion.button
               key={value}
               id={`nav-${value}`}
-              onClick={() => { setCategory(value); if(clearActiveItem) clearActiveItem(); }}
+              onClick={() => setCategory(value)}
               className={`group relative px-3 py-1.5 text-[10px] font-black tracking-[0.2em] uppercase transition-colors duration-200 overflow-hidden ${
                 isActive ? 'text-[var(--strm-crust)]' : 'text-ctp-overlay1 hover:text-[var(--strm-crust)]'
               }`}
@@ -302,7 +298,7 @@ export default function Navbar({
             { label: t.cdrama, value: 'cdrama' },
           ]}
           value={currentCategory}
-          onChange={(val) => { setCategory(val); if(clearActiveItem) clearActiveItem(); }}
+          onChange={(val) => setCategory(val)}
         />
       </nav>
 
@@ -381,7 +377,6 @@ export default function Navbar({
                 window.open('https://www.vidking.net', '_blank', 'noopener,noreferrer')
               } else {
                 setCategory(val);
-                if (clearActiveItem) clearActiveItem();
               }
             }}
           />

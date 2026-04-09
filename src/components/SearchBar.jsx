@@ -1,11 +1,23 @@
-import React, { useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Loader2 } from 'lucide-react'
 
 const SPRING = { type: 'spring', damping: 26, stiffness: 320 }
 
 export default function SearchBar({ query, setQuery, loading, t }) {
+  const [localValue, setLocalValue] = useState(query)
   const inputRef = useRef(null)
+
+  // Sync local value with parent query (source of truth)
+  useEffect(() => {
+    setLocalValue(query)
+  }, [query])
+
+  const handleChange = (e) => {
+    const val = e.target.value
+    setLocalValue(val)
+    setQuery(val)
+  }
 
   return (
     <motion.div 
@@ -19,14 +31,14 @@ export default function SearchBar({ query, setQuery, loading, t }) {
         <Search 
           size={24} 
           strokeWidth={1.5} 
-          className={`mr-4 transition-colors ${query ? 'text-ctp-accent' : 'text-ctp-overlay1 group-hover:text-ctp-text'}`} 
+          className={`mr-4 transition-colors ${localValue ? 'text-ctp-accent' : 'text-ctp-overlay1 group-hover:text-ctp-text'}`} 
         />
         
         <input
           ref={inputRef}
           type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={localValue}
+          onChange={handleChange}
           placeholder={t.search || "Search movies, series, anime..."}
           className="flex-1 bg-transparent text-ctp-text text-lg md:text-xl placeholder:text-ctp-overlay0 placeholder:text-sm placeholder:font-bold placeholder:uppercase placeholder:tracking-widest focus:outline-none"
         />
@@ -41,7 +53,7 @@ export default function SearchBar({ query, setQuery, loading, t }) {
           </motion.div>
         )}
         
-        {query && !loading && (
+        {localValue && !loading && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.8 }} 
             animate={{ opacity: 1, scale: 1 }}
