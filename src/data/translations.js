@@ -30,6 +30,8 @@ export const translations = {
     china: "China",
     thailand: "Thailand",
     vietnam: "Vietnam",
+    cast: "Cast",
+    director: "Director",
   },
   id: {
     trending: "Sedang Tren",
@@ -62,6 +64,8 @@ export const translations = {
     china: "Cina",
     thailand: "Thailand",
     vietnam: "Vietnam",
+    cast: "Pemeran",
+    director: "Sutradara",
   },
   jp: {
     trending: "トレンド",
@@ -94,6 +98,8 @@ export const translations = {
     china: "中国",
     thailand: "タイ",
     vietnam: "ベトナム",
+    cast: "キャスト",
+    director: "監督",
   },
   kr: {
     trending: "트렌드",
@@ -126,6 +132,8 @@ export const translations = {
     china: "중국",
     thailand: "태국",
     vietnam: "베트남",
+    cast: "출연진",
+    director: "감독",
   },
   es: {
     trending: "Tendencias",
@@ -158,5 +166,7 @@ export const translations = {
     china: "China",
     thailand: "Tailandia",
     vietnam: "Vietnam",
+    cast: "Reparto",
+    director: "Director",
   },
 };

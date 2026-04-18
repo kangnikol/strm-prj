@@ -121,7 +121,7 @@ function Hero({ featured, onPlay, t }) {
    ═══════════════════════════════════════════════════════════════════════ */
 function MainContent({ 
   category, country, t, loading, fetchMore, itemsMap, pagesMap, usingMock,
-  searchQuery, setSearchQuery, searchResults, searchLoading, searchHasMore, fetchMoreSearch,
+  searchQuery, setSearchQuery, searchResults, searchSimilar, searchLoading, searchHasMore, fetchMoreSearch,
   history, removeHistory, auth
 }) {
   const navigate = useNavigate()
@@ -255,7 +255,7 @@ function MainContent({
               </div>
               {searchResults.length === 0 && !searchLoading ? (
                 <div className="flex flex-col items-center justify-center p-12 text-ctp-overlay">
-                  <span className="text-[10px] tracking-widest uppercase font-bold">No results found</span>
+                  <span className="text-[10px] tracking-widest uppercase font-bold">No exact results found</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
@@ -267,6 +267,24 @@ function MainContent({
                 </div>
               )}
               <InfiniteScroll onVisible={fetchMoreSearch} loading={searchLoading} hasMore={searchHasMore} />
+
+              {/* Similar / You Might Also Like */}
+              {searchSimilar.length > 0 && (
+                <div className="mt-12">
+                  <div className="px-6 flex items-center justify-between mb-8 border-b border-ctp-surface pb-4">
+                    <h3 className="text-[10px] font-black tracking-[0.4em] uppercase text-ctp-overlay">
+                      {searchResults.length > 0 ? 'You Might Also Like' : 'Trending Now'}
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-12 gap-x-4 gap-y-10 px-6">
+                    {searchSimilar.map((item, i) => (
+                      <div key={`sim-${item.id}-${i}`} className="col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-2">
+                        <VideoCard item={item} index={i} featured={false} onClick={handlePlay} t={t} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
         </>
@@ -364,7 +382,7 @@ export default function App() {
 
   const { itemsMap, pagesMap, loading, fetchMore, resetCategory, usingMock } = useTMDB(auth, showAdult)
   const { history, addOrUpdate: addHistory, removeEntry: removeHistory } = useHistory()
-  const { results: searchResults, loading: searchLoading, hasMore: searchHasMore, fetchMoreSearch } = useSearch(searchQuery)
+  const { results: searchResults, similar: searchSimilar, loading: searchLoading, hasMore: searchHasMore, fetchMoreSearch } = useSearch(searchQuery)
   const t = translations[lang]
 
   useEffect(() => { localStorage.setItem('strm-lang', lang) }, [lang])
@@ -412,35 +430,35 @@ export default function App() {
             <Route path="/" element={
               <MainContent 
                 category={category} country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
-                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchSimilar={searchSimilar} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
                 history={history} removeHistory={removeHistory} auth={auth}
               />
             } />
             <Route path="/category/:cat" element={
               <MainContent 
                 category={category} country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
-                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchSimilar={searchSimilar} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
                 history={history} removeHistory={removeHistory} auth={auth}
               />
             } />
             <Route path="/search" element={
               <MainContent 
                 category={category} country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
-                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchSimilar={searchSimilar} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
                 history={history} removeHistory={removeHistory} auth={auth}
               />
             } />
             <Route path="/favorites" element={
               <MainContent 
                 category="favorites" country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
-                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchSimilar={searchSimilar} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
                 history={history} removeHistory={removeHistory} auth={auth}
               />
             } />
             <Route path="/watchlist" element={
               <MainContent 
                 category="watchlist" country={country} t={t} loading={loading} fetchMore={fetchMore} itemsMap={itemsMap} pagesMap={pagesMap} usingMock={usingMock}
-                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
+                searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchResults={searchResults} searchSimilar={searchSimilar} searchLoading={searchLoading} searchHasMore={searchHasMore} fetchMoreSearch={fetchMoreSearch}
                 history={history} removeHistory={removeHistory} auth={auth}
               />
             } />
