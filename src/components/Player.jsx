@@ -210,7 +210,7 @@ export default function Player({
   // Vidking embed URL — dynamically maps TV selections
   const isHistoryEpisode = !isTV || (item.season === activeSeason && item.episode === activeEpisode)
   const startSecs = isHistoryEpisode ? (item.elapsedSeconds || 0) : 0
-  const timeParam = startSecs > 0 ? `?t=${startSecs}` : ''
+  const timeParam = startSecs > 0 ? `?progress=${startSecs}` : ''
   
   const vidkingUrl = isTV
     ? `https://www.vidking.net/embed/tv/${item.id}/${activeSeason}/${activeEpisode}${timeParam}`
