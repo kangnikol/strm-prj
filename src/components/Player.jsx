@@ -75,7 +75,7 @@ export default function Player({
   // History: record entry on mount and tick every 30s
   useEffect(() => {
     if (!onHistoryUpdate) return
-    const isHistoryEpisode = !isTV || (item.season === activeSeason && item.episode === activeEpisode)
+    const isHistoryEpisode = !isTV || (Number(item.season) === Number(activeSeason) && Number(item.episode) === Number(activeEpisode))
     const startObjSecs = isHistoryEpisode ? (item.elapsedSeconds || 0) : 0
     
     elapsedRef.current = startObjSecs
@@ -208,7 +208,7 @@ export default function Player({
   }, [item.id, activeSeason, isTV])
 
   // Vidking embed URL — dynamically maps TV selections
-  const isHistoryEpisode = !isTV || (item.season === activeSeason && item.episode === activeEpisode)
+  const isHistoryEpisode = !isTV || (Number(item.season) === Number(activeSeason) && Number(item.episode) === Number(activeEpisode))
   const startSecs = isHistoryEpisode ? (item.elapsedSeconds || 0) : 0
   const timeParam = startSecs > 0 ? `?progress=${startSecs}` : ''
   
