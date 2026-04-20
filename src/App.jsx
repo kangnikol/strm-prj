@@ -360,10 +360,14 @@ export default function App() {
   const setSearchQuery = (q) => {
     if (!q) {
       searchParams.delete('q')
-      navigate('/')
+      if (pathname === '/search') {
+        navigate('/')
+      } else {
+        setSearchParams(searchParams)
+      }
     } else {
-      setSearchParams({ q })
-      if (pathname !== '/search') navigate('/search?q=' + q)
+      searchParams.set('q', q)
+      setSearchParams(searchParams)
     }
   }
 
